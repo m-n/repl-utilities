@@ -30,9 +30,10 @@
      ,@body))
 
 (defmacro doc (func)
-  "prints any documentation for the symbol's variable, function, structure, type, or setf"
+  "Print any documentation for the symbol.
+Use variable, function, structure, type, compiler macro, method combinationor, or setf."
   (with-gensyms (arguments)
-    (setf arguments (list 'variable 'function 'structure 'type 'setf))
+    (setf arguments (list 'compiler-macro 'method-combination 'variable 'function 'structure 'type 'setf))
     (loop for arg in arguments do
 	  (when (documentation func arg)
 	    (format t "~a:::  ~s~%~%" arg (documentation func arg))))))
