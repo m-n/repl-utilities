@@ -1,0 +1,5 @@
+A set of utilities to make life at the repl easier.
+
+Meant to be autoloaded and use-packaged by your lisps init file.
+
+
