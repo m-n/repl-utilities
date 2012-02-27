@@ -1,5 +1,7 @@
 A set of utilities to make life at the repl easier.
 
+Tested on SBCL and CCL, further porting should be trivial. 
+
 Meant to be autoloaded and use-packaged by your lisps init file.
 
 By far the most useful function in here is deflexical, taken from Rob Warnock

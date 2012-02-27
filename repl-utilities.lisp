@@ -3,6 +3,10 @@
 (in-package #:repl-utilities)
 
 
+;; An alternative like (do-external-symbols (sym 'repl-utilities)
+;;                       (describe sym))
+;; is less nice because it wastes too much vertical space.
+
 (defun readme (&optional (package *package*))
   "Print the documentation on the exported functions of a package."
   (let (undocumented-symbols)
@@ -38,13 +42,14 @@ Use variable, function, structure, type, compiler macro, method combinationor, o
 	  (when (documentation func arg)
 	    (format t "~a:::  ~s~%~%" arg (documentation func arg))))))
 
-(defun trace-package (&key (inheritedp nil))
+(defun trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*."
-  (loop for sym being the symbols in *package* when 
-	(if inheritedp
-	    t
-	    (eq *package* (symbol-package sym)))
-	do (ignore-errors (eval `(trace  ,sym)))))
+  (let ((pac (find-package package)))
+    (loop for sym being the symbols in pac when 
+	  (if inheritedp
+	      t
+	      (eq pac (symbol-package sym)))
+	  do (ignore-errors (eval `(trace  ,sym))))))
 
 (defun print-hash (hash-table)
   "Print the hash table as: Key, Value~% "
@@ -89,6 +94,9 @@ Use variable, function, structure, type, compiler macro, method combinationor, o
   ;;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
   ;;; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 )
+(defun de (&rest rest)
+  "Shortening of describe. A Rob Warnock function."
+  (apply #'describe rest)) 
 
 (defmacro lex (&rest args)
   "Shortening of deflex: define a global lexical variable."
@@ -141,7 +149,7 @@ the symbol-function is called on them."
 ;; but without ql?
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #+sbcl (require 'sb-introspect)
-  #+(or ccl corman) (require 'ccl)
+;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure it. 
   #+(or clisp ecl scl) (require 'ext)
   #+abcl (require 'sys)
   #+allegro (require 'excl)

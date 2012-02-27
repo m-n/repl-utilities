@@ -13,5 +13,7 @@
    :add-advice
    :remove-advice
    :readme
-   :arglist))
+   #-ccl ;; causes a symbol conflict
+   :arglist
+   :de))
 
