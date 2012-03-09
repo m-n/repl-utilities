@@ -29,6 +29,35 @@
 		      (documentation sym type))
 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
 
+(defun exs (&optional (package *package*))
+  "Print the external symbols of package."
+  (let (ss)
+    (do-external-symbols (s package)
+      (push s ss))
+    (format t "~{~A, ~}" (sort ss #'string<))))
+
+(defun exfns (&optional (package *package*))
+  (let (fns)
+    (do-external-symbols (fn package)
+      (when (fboundp fn)
+	(push fn fns)))
+    (format t "~{~A, ~}" (sort fns #'string<))))
+
+(defun excs (&optional (package *package*))
+  (let (classes)
+    (do-external-symbols (class package)
+      (when (find-class class nil)
+	(push class classes)))
+    (format t "~{~A, ~}" (sort classes #'string<))))
+
+#+sbcl
+(defun exts (&optional (package *package*))
+  (let (types)
+    (do-external-symbols (type package)
+      (when (sb-ext:valid-type-specifier-p type)
+	(push type types)))
+    (format t "~{~A, ~}" (sort types #'string<))))
+
 (defmacro with-gensyms ((&rest names) &body body)
   `(let ,(loop for n in names collect `(,n (gensym)))
      ,@body))
