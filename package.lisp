@@ -4,6 +4,7 @@
   (:use :cl)
   (:export
    :dev
+   :bring
    :print-hash
    :doc
    :trace-package

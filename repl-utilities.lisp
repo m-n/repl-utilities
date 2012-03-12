@@ -143,8 +143,19 @@ For use at the repl. Mnemonic for develop."
 		      #+asdf(asdf:load-system ',package))
 	  (in-package ,package)
 	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (unless (find-symbol (symbol-name sym))
-	      (import sym)))))
+	    (if (find-symbol (symbol-name sym))
+		(import sym)
+		(format t "~&Left behind ~A to avoid conflict.~%" sym)))))
+
+(defmacro bring (package)
+  "Load the package. Import the package's exported symbols that don't conflict.
+For use at the repl."
+  `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',package))
+		      #+asdf(asdf:load-system ',package))
+	  (do-external-symbols (sym (find-package (symbol-name ',package)))
+	    (if (find-symbol (symbol-name sym))
+		(import sym)
+		(format t "~&Left behind ~A to avoid conflict.~%" sym)))))
 
 (defvar *advised-functions* (make-hash-table))
 
