@@ -24,8 +24,8 @@
 		      setf type variable))
 	(when (documentation sym type)
 	  (if (member type '(compiler-macro function method-combination setf))
-	      (format t "~&~A > ~A~% ~<~A~%~%~>"
-		      (cons sym (arglist sym)) type
+	      (format t "~&(~:@(~A~) ~{~A~}) > ~A~% ~<~A~%~%~>"
+		       sym (arglist sym) type
 		      (documentation sym type))
 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
 
@@ -72,7 +72,7 @@ Use variable, function, structure, type, compiler macro, method combinationor, o
 	    (format t "~a:::  ~s~%~%" arg (documentation func arg))))))
 
 (defun trace-package (&optional (package *package*) (inheritedp nil))
-  "Trace all of the symbols in *package*."
+  "Trace all of the symbols in *package*. Don't trace :cl or :cl-user"
   (let ((pac (find-package package)))
     (loop for sym being the symbols in pac when 
 	  (if inheritedp
@@ -144,8 +144,8 @@ For use at the repl. Mnemonic for develop."
 	  (in-package ,package)
 	  (do-external-symbols (sym (find-package 'repl-utilities))
 	    (if (find-symbol (symbol-name sym))
-		(import sym)
-		(format t "~&Left behind ~A to avoid conflict.~%" sym)))))
+		(format t "~&Left behind ~A to avoid conflict.~%" sym)
+		(import sym)))))
 
 (defmacro bring (package)
   "Load the package. Import the package's exported symbols that don't conflict.
