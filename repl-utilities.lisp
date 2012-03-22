@@ -25,7 +25,7 @@
 	(when (documentation sym type)
 	  (if (member type '(compiler-macro function method-combination setf))
 	      (format t "~&(~:@(~A~) ~{~A~}) > ~A~% ~<~A~%~%~>"
-		       sym (arglist sym) type
+		      sym (if (consp #1=(arglist sym)) #1# (list #1#)) type
 		      (documentation sym type))
 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
 
@@ -59,7 +59,7 @@
     (format t "~{~A, ~}" (sort types #'string<))))
 
 (defmacro with-gensyms ((&rest names) &body body)
-  `(let ,(loop for n in names collect `(,n (gensym)))
+  `(let ,(loop for n in names collect `(,n (gensym ,(concatenate 'string (symbol-name n) "-"))))
      ,@body))
 
 (defmacro doc (func)
@@ -255,3 +255,55 @@ Implementations taken from slime."
 	     (ext:function-arglist fun)
 	   (if winp args :not-available))
    :not-available))
+
+;;;; Regex syntax, stolen whole cloth from Let Over Lambda
+
+(defun segment-reader (stream ch n)
+  (when (> n 0)
+    (let (chars)
+      (do ((curr (read-char stream)
+		 (read-char stream)))
+	  ((char= ch curr) 
+	   (cons (coerce (nreverse chars) 'string)
+		 (segment-reader stream ch (- n 1))))
+	(push curr chars)))))
+
+;have to fix his damn !
+#+cl-ppcre
+(defmacro match-mode-ppcre-lambda-form (args)
+  (with-gensyms (string)
+    ``(lambda (,',string)
+	(cl-ppcre:scan
+	 ,(first ,args)
+	 ,',string))))
+
+#+cl-ppcre
+(defmacro subst-mode-ppcre-lambda-form (args)
+  (with-gensyms (string gargs)
+    ``(lambda (,',string)
+	(let ((,',gargs ',,args))
+	  (cl-ppcre:regex-replace-all
+	   (first ,',gargs)
+	   ,',string
+	   (second ,',gargs))))))
+
+#+cl-ppcre
+(defun |#~-reader| (stream sub-char numarg)
+  (declare (ignore sub-char numarg))
+  (let ((mode-char (read-char stream)))
+    (cond
+      ((char= mode-char #\m)
+         (match-mode-ppcre-lambda-form
+           (segment-reader stream
+                           (read-char stream)
+                           1)))
+      ((char= mode-char #\s)
+         (subst-mode-ppcre-lambda-form
+           (segment-reader stream
+                           (read-char stream)
+                           2)))
+      (t (error "Unknown #~~ mode character")))))
+
+#+cl-ppcre
+(defun enable-ppcre-reader ()
+  (set-dispatch-macro-character #\# #\~ #'|#~-reader|))
