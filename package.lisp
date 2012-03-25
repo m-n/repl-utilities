@@ -16,5 +16,9 @@
    :readme
    #-ccl ;; causes a symbol conflict
    :arglist
-   :de))
+   :de
+   #:nic
+   #:dependency-locations
+   #:enable-ppcre-reader
+   #:enable-run-reader))
 

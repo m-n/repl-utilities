@@ -24,8 +24,10 @@
 		      setf type variable))
 	(when (documentation sym type)
 	  (if (member type '(compiler-macro function method-combination setf))
-	      (format t "~&(~:@(~A~) ~{~A~}) > ~A~% ~<~A~%~%~>"
-		      sym (if (consp #1=(arglist sym)) #1# (list #1#)) type
+	      (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
+		      sym
+		      (when #1=(arglist sym) (if (consp #1#) #1# (list #1#)))
+		      type
 		      (documentation sym type))
 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
 
@@ -154,8 +156,8 @@ For use at the repl."
 		      #+asdf(asdf:load-system ',package))
 	  (do-external-symbols (sym (find-package (symbol-name ',package)))
 	    (if (find-symbol (symbol-name sym))
-		(import sym)
-		(format t "~&Left behind ~A to avoid conflict.~%" sym)))))
+		(format t "~&Left behind ~A to avoid conflict.~%" sym)
+		(import sym)))))
 
 (defvar *advised-functions* (make-hash-table))
 
@@ -198,15 +200,14 @@ the symbol-function is called on them."
 (defun arglist (fname)
   "Return the arglist for the given function name.
 Implementations taken from slime."
-  (or
+  (first-form
    #+sbcl (sb-introspect:function-lambda-list fname)
    #+ccl (multiple-value-bind (arglist binding)
 	     (let ((*break-on-signals* nil))
 	       (ccl:arglist fname))
-	   (if binding
-	       arglist
-	       :not-available))
-   #+clisp (block nil
+	   (declare (ignore binding))
+	   arglist)
+	    #+clisp (block nil
 	     (or (ignore-errors
 		   (let ((exp (function-lambda-expression fname)))
 		     (and exp (return (second exp)))))
@@ -302,8 +303,44 @@ Implementations taken from slime."
            (segment-reader stream
                            (read-char stream)
                            2)))
+      ((char= mode-char z)
+       )
       (t (error "Unknown #~~ mode character")))))
 
 #+cl-ppcre
 (defun enable-ppcre-reader ()
   (set-dispatch-macro-character #\# #\~ #'|#~-reader|))
+
+#+(and ccl cl-ppcre)
+(defun |# -reader| (stream sub-char numarg)
+  (declare (ignore sub-char numarg))
+  (destructuring-bind (program . options)
+      (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
+    (when (string-equal program "ls")
+      (push "--color=yes" options))
+    (ccl::run-program program options :output *standard-output*)))
+
+#+(and ccl cl-ppcre)
+(defun enable-run-reader ()
+  (set-dispatch-macro-character #\# #\  #'|# -reader|))
+                                                                
+
+(defun nic (package-name nick-symbol)
+  "Add an additional nickname to package."
+  (let ((old-nicknames (package-nicknames package-name)))
+    (if (and (find-package nick-symbol)
+	     (not (eq (find-package nick-symbol)
+		      (find-package package-name))))
+	(format t "Not adding that nick because it belongs to ~A~%"
+		(find-package nick-symbol))
+	(rename-package package-name package-name
+			(cons nick-symbol old-nicknames)))))
+
+#+quicklisp
+(defun dependency-locations (system-name)
+  (labels ((rec (deplist)
+	     (if (consp deplist)
+		 (progn (rec (car deplist)) (rec (cdr deplist)))
+	         (when deplist (print (ql:where-is-system
+				       (ql::system-file-name deplist)))))))
+    (rec (ql::dependency-tree system-name))))
