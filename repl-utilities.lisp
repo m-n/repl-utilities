@@ -303,8 +303,6 @@ Implementations taken from slime."
            (segment-reader stream
                            (read-char stream)
                            2)))
-      ((char= mode-char z)
-       )
       (t (error "Unknown #~~ mode character")))))
 
 #+cl-ppcre
@@ -314,11 +312,27 @@ Implementations taken from slime."
 #+(and ccl cl-ppcre)
 (defun |# -reader| (stream sub-char numarg)
   (declare (ignore sub-char numarg))
-  (destructuring-bind (program . options)
-      (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
-    (when (string-equal program "ls")
-      (push "--color=yes" options))
-    (ccl::run-program program options :output *standard-output*)))
+  (with-gensyms (proc s final)
+    (declare (ignorable s));; silence compiler
+    (let ((command (with-output-to-string (string)
+		     (loop (let ((ch (read-char stream)))
+			     (if (member ch '(#\ #\# #\Newline) :test #'char=)
+				 (return string)
+				 (write-char ch string))))))
+	  (s (make-array '(0) :element-type 'base-char :fill-pointer 0 :adjustable t)))
+      `(let ((,proc
+	     (with-output-to-string (,final ,s)
+	       (ccl::run-program "/bin/sh" (list "-c" ,command) :output ,final))))
+	(values ,s ,proc)))))
+
+;; (defun |# -reader| (stream sub-char numarg)
+;;   (declare (ignore sub-char numarg))
+;;   (destructuring-bind (program . options)
+;;       (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
+;;     (when (string-equal program "ls")
+;;       (push "--color=yes" options))
+;;     (ccl::run-program program options :output *standard-output*)))
+
 
 #+(and ccl cl-ppcre)
 (defun enable-run-reader ()
