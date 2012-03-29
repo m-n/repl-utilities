@@ -20,5 +20,7 @@
    #:nic
    #:dependency-locations
    #:enable-ppcre-reader
-   #:enable-run-reader))
+   #:enable-run-reader
+   #:advisedp
+   #:*advised-functions*))
 
