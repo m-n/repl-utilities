@@ -21,6 +21,7 @@
    #:dependency-locations
    #:enable-ppcre-reader
    #:enable-run-reader
-   #:advisedp
-   #:*advised-functions*))
+   #-ccl #:advisedp
+   #:*advised-functions*
+   #:dbgv))
 

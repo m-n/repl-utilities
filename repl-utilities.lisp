@@ -149,15 +149,26 @@ For use at the repl. Mnemonic for develop."
 		(format t "~&Left behind ~A to avoid conflict.~%" sym)
 		(import sym)))))
 
+(defun ensure-unqouted (form)
+  "If form is quoted, remove one level of quoting. Otherwise return form.
+This is a useful convenience for macros which be passed a quoted symbol."
+  (if (and (listp form) (eq (car form) 'quote))
+      (second form)
+      form))
+
 (defmacro bring (package)
   "Load the package. Import the package's exported symbols that don't conflict.
 For use at the repl."
-  `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',package))
-		      #+asdf(asdf:load-system ',package))
-	  (do-external-symbols (sym (find-package (symbol-name ',package)))
-	    (if (find-symbol (symbol-name sym))
-		(format t "~&Left behind ~A to avoid conflict.~%" sym)
-		(import sym)))))
+  (with-gensyms (gpackage)
+    `(let ((,gpackage ',(ensure-unqouted package)))
+       (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))
+		   #+asdf (asdf:load-system ,gpackage))
+       (let ((,gpackage (find-package ,gpackage)))
+	 (do-external-symbols (sym ,gpackage)
+	   (if (find-symbol (symbol-name sym))
+	       (unless (eq (symbol-package sym) ,gpackage)
+		 (format t "~&Left behind ~A to avoid conflict.~%" sym))
+	       (import sym)))))))
 
 (defvar *advised-functions* (make-hash-table))
 
@@ -358,3 +369,21 @@ Implementations taken from slime."
 	         (when deplist (print (ql:where-is-system
 				       (ql::system-file-name deplist)))))))
     (rec (ql::dependency-tree system-name))))
+
+
+(defmacro dbgv ((&optional (where "DEBUG") 
+                           (stream *standard-output*)) 
+                &body forms) 
+  "Execute FORMS like PROGN, but print each form and its result to the 
+STREAM."
+  ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
+  ;; Alteration of Maciej Katafiasz's alteration of a Rob Warnock utility
+  (with-gensyms (result) 
+    `(let (,result) 
+       (progn 
+         (format ,stream "~&DBGV: @~a:~%" ',where) 
+         ,@(loop for form in forms 
+              collect `(progn 
+                         (setf ,result (multiple-value-list ,form)) 
+                         (format t "~s = ~{~s~^, ~}~%" ',form ,result))) 
+         (values-list ,result))))) 
