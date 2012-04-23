@@ -23,5 +23,9 @@
    #:enable-run-reader
    #-ccl #:advisedp
    #:*advised-functions*
-   #:dbgv))
+   #:dbgv
+   #:exs
+   #:exfns
+   #:excs
+   #:exts))
 

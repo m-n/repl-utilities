@@ -82,40 +82,6 @@ For use at the repl."
 			   (documentation ,sym ,type))
 		   (format t "~&~A > ~A~% ~<~A~%~%~>" ,sym ,type (documentation ,sym ,type))))))))))
 
-
-;; (defun readme (&optional (package *package*))
-;;   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
-;;   "Print the documentation on the exported functions of a package."
-;;   (let (undocumented-symbols)
-;;     (do-external-symbols (sym package)
-;;       (unless (some (lambda (doctype) (documentation sym doctype))
-;; 		    '(compiler-macro function method-combination
-;; 		      setf structure type variable))
-;; 	(push sym undocumented-symbols)))
-;;     (when undocumented-symbols
-;;       (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
-;;                    Documented exported symbols:~%~%"
-;; 	      undocumented-symbols)))
-;;   (let ((*print-case* :downcase))
-;;     (do-external-symbols (sym package)
-;;       (dolist (type '(compiler-macro function method-combination ;structure
-;; 		      setf type variable))
-;; 	(when (documentation sym type)
-;; 	  (if (member type '(compiler-macro function method-combination setf))
-;; 	      (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
-;; 		      sym
-;; 		      (when #1=(arglist sym) (if (consp #1#) #1# (list #1#)))
-;; 		      type
-;; 		      (documentation sym type))
-;; 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
-
-;; (defun exs (&optional (package *package*))
-;;   "Print the external symbols of package."
-;;   (let (ss)
-;;     (do-external-symbols (s package)
-;;       (push s ss))
-;;     (format t "~{~A, ~}" (sort ss #'string<))))
-
 (defmacro exs (&optional (package *package*))
   "Print the external symbols of package."
   (with-gensyms (ss s)
@@ -124,51 +90,58 @@ For use at the repl."
 	 (push ,s ,ss))
        (format t "~{~A, ~}" (sort ,ss #'string<)))))
 
-(defun exfns (&optional (package *package*))
+(defmacro exfns (&optional (package *package*))
   "Print the external fboundp symbols of a package."
-  (let (fns)
-    (do-external-symbols (fn package)
-      (when (fboundp fn)
-	(push fn fns)))
-    (format t "~{~A, ~}" (sort fns #'string<))))
+  (with-gensyms (fns fn)
+    `(let (fns)
+       (do-external-symbols (,fn ',(ensure-unquoted package))
+	 (when (fboundp ,fn)
+	   (push ,fn ,fns)))
+       (format t "~{~A, ~}" (sort ,fns #'string<)))))
 
-(defun excs (&optional (package *package*))
+(defmacro excs (&optional (package *package*))
   "Print the external symbols for which find-class is truthy."
-  (let (classes)
-    (do-external-symbols (class package)
-      (when (find-class class nil)
-	(push class classes)))
-    (format t "~{~A, ~}" (sort classes #'string<))))
+  (with-gensyms (classes class)
+    `(let (,classes)
+      (do-external-symbols (,class ',(ensure-unquoted package))
+	(when (find-class ,class nil)
+	  (push ,class ,classes)))
+      (format t "~{~A, ~}" (sort ,classes #'string<)))))
 
 #+(or sbcl ccl)
-(defun exts (&optional (package *package*))
+(defmacro exts (&optional (package *package*))
   "Print the external symbols which are type specifiers."
-  (let (types)
-    (do-external-symbols (type package)
-      (when (first-form #+sbcl(sb-ext:valid-type-specifier-p type)
-			#+ccl(ccl:type-specifier-p type))
-	(push type types)))
-    (format t "~{~A, ~}" (sort types #'string<))))
+  (with-gensyms (types type)
+    `(let (,types)
+       (do-external-symbols (,type ',(ensure-unquoted package))
+	(when (first-form #+sbcl(sb-ext:valid-type-specifier-p ,type)
+			  #+ccl(ccl:type-specifier-p ,type))
+	  (push ,type ,types)))
+      (format t "~{~A, ~}" (sort ,types #'string<)))))
 
-(defun trace-package (&optional (package *package*) (inheritedp nil))
+(defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. Don't trace :cl or :cl-user."
-  (let ((pac (find-package package)))
-    (loop for sym being the symbols in pac when 
-	  (if inheritedp
-	      t
-	      (eq pac (symbol-package sym)))
-	  do (ignore-errors (eval `(trace  ,sym))))))
+  (with-gensyms (pac sym)
+    `(let ((,pac (find-package ',(ensure-unquoted package))))
+      (loop for ,sym being the symbols in ,pac when 
+	    (if ,inheritedp
+		t
+		(eq ,pac (symbol-package ,sym)))
+	    do (ignore-errors (eval `(trace  ,,sym)))))))
 
-(defun nic (package-name nick-symbol)
+(defmacro nic (package-name nick-symbol)
   "Add an additional nickname to package."
-  (let ((old-nicknames (package-nicknames package-name)))
-    (if (and (find-package nick-symbol)
-	     (not (eq (find-package nick-symbol)
-		      (find-package package-name))))
-	(format t "Not adding that nick because it belongs to ~A~%"
-		(find-package nick-symbol))
-	(rename-package package-name package-name
-			(cons nick-symbol old-nicknames)))))
+  (with-gensyms (old-nicknames)
+    `(let ((,old-nicknames (package-nicknames ',(ensure-unquoted package-name))))
+       (if (and (find-package ',(ensure-unquoted nick-symbol))
+		(not (eq (find-package ',(ensure-unquoted nick-symbol))
+			 (find-package ',(ensure-unquoted package-name)))))
+	   (format t "Not adding that nick because it belongs to ~A~%"
+		   (find-package ',(ensure-unquoted nick-symbol)))
+	   (rename-package ',(ensure-unquoted package-name)
+			   ',(ensure-unquoted package-name)
+			   (cons ',(ensure-unquoted nick-symbol)
+				 ,old-nicknames))))))
 
 ;;;; Symbol Utilities
 
@@ -225,8 +198,10 @@ Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation."
   `(loop for arg in '(compiler-macro method-combination variable
 		      function structure type setf)
-	 when (documentation ',func arg) do
-	 (format t "~a: ~s~%~%" arg (documentation ',func arg))))
+	 when (documentation ',(ensure-unquoted func) arg) do
+	 (format t "~a: ~s~%~%"
+		 arg
+		 (documentation ',(ensure-unquoted func) arg))))
 
 ;;;; Advice
 ;;; TODO: these advice functions are all alpha quality, and I need to review
