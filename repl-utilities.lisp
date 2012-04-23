@@ -2,43 +2,130 @@
 
 (in-package #:repl-utilities)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; this may be called in macro definitions
+  (defun ensure-unquoted (form) 
+    "If form is quoted, remove one level of quoting. Otherwise return form.
+This is a useful for defining convenience for macros which may be passed a
+quoted or unquoted symbol."
+    (if (and (listp form) (eq (car form) 'cl:quote))
+	(second form)
+	form))
 
-;; An alternative like (do-external-symbols (sym 'repl-utilities)
-;;                       (describe sym))
-;; is less nice because it wastes too much vertical space.
+  (defmacro with-gensyms ((&rest names) &body body)
+    `(let ,(loop for n in names collect
+		 ;; (SYMBOL-NAME #:SYMBOL-NAME-2983)
+		 `(,n (gensym ,(concatenate 'string (symbol-name n) "-"))))
+       ,@body))
+  
+  (defmacro first-form (&rest forms)
+    "Return the first form; useful when you want one of multiple possible 
+conditionally read forms."
+    (first forms))
+  ) ; end eval-when
 
-(defun readme (&optional (package *package*))
+;;;; Package Utilities
+
+(defmacro dev (package)
+  "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
+For use at the repl. Mnemonic for develop."
+  `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',(ensure-unquoted package)))
+		      #+asdf(asdf:load-system ',(ensure-unquoted package))
+		      (error 'package-error "~&DEV requires either quicklisp or ~
+                                             asdf be present."))
+	  (in-package ,(ensure-unquoted package))
+	  (do-external-symbols (sym (find-package 'repl-utilities))
+	    (if (find-symbol (symbol-name sym))
+		(format t "~&Left behind ~A to avoid conflict.~%" sym)
+		(import sym)))))
+
+(defmacro bring (package)
+  "Load the package. Import the package's exported symbols that don't conflict.
+For use at the repl."
+  (with-gensyms (gpackage)
+    `(let ((,gpackage ',(ensure-unquoted package)))
+       (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))
+		   #+asdf (asdf:load-system ,gpackage))
+       (let ((,gpackage (find-package ,gpackage)))
+	 (do-external-symbols (sym ,gpackage)
+	   (if (find-symbol (symbol-name sym))
+	       (unless (eq  (symbol-package
+			     (find-symbol (symbol-name sym)))
+			    ,gpackage)
+		 (format t "~&Left behind ~A to avoid conflict.~%" sym))
+	       (import sym)))))))
+
+(defmacro readme (&optional (package *package*))
+  ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
   "Print the documentation on the exported functions of a package."
-  (let (undocumented-symbols)
-    (do-external-symbols (sym package)
-      (unless (some (lambda (doctype) (documentation sym doctype))
-		    '(compiler-macro function method-combination
-		      setf structure type variable))
-	(push sym undocumented-symbols)))
-    (when undocumented-symbols
-      (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%Documented exported symbols:~%~%"
-	      undocumented-symbols)))
-  (let ((*print-case* :downcase))
-    (do-external-symbols (sym package)
-      (dolist (type '(compiler-macro function method-combination  ;structure
-		      setf type variable))
-	(when (documentation sym type)
-	  (if (member type '(compiler-macro function method-combination setf))
-	      (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
-		      sym
-		      (when #1=(arglist sym) (if (consp #1#) #1# (list #1#)))
-		      type
-		      (documentation sym type))
-	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
+  (with-gensyms (undocumented-symbols sym type)
+    `(let (,undocumented-symbols)
+       (do-external-symbols (,sym ',(ensure-unquoted package))
+	 (unless (some (lambda (doctype) (documentation ,sym doctype))
+		       '(compiler-macro function method-combination
+			 setf structure type variable))
+	   (push ,sym ,undocumented-symbols)))
+       (when ,undocumented-symbols
+	 (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
+                   Documented exported symbols:~%~%"
+		 ,undocumented-symbols))
+       (let ((*print-case* :downcase))
+	 (do-external-symbols (,sym ',(ensure-unquoted package))
+	   (dolist (,type '(compiler-macro function method-combination ;structure
+			   setf type variable))
+	     (when (documentation ,sym ,type)
+	       (if (member ,type '(compiler-macro function method-combination setf))
+		   (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
+			   ,sym
+			   (when #1=(arglist ,sym) (if (consp #1#) #1# (list #1#)))
+			   ,type
+			   (documentation ,sym ,type))
+		   (format t "~&~A > ~A~% ~<~A~%~%~>" ,sym ,type (documentation ,sym ,type))))))))))
 
-(defun exs (&optional (package *package*))
+
+;; (defun readme (&optional (package *package*))
+;;   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
+;;   "Print the documentation on the exported functions of a package."
+;;   (let (undocumented-symbols)
+;;     (do-external-symbols (sym package)
+;;       (unless (some (lambda (doctype) (documentation sym doctype))
+;; 		    '(compiler-macro function method-combination
+;; 		      setf structure type variable))
+;; 	(push sym undocumented-symbols)))
+;;     (when undocumented-symbols
+;;       (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
+;;                    Documented exported symbols:~%~%"
+;; 	      undocumented-symbols)))
+;;   (let ((*print-case* :downcase))
+;;     (do-external-symbols (sym package)
+;;       (dolist (type '(compiler-macro function method-combination ;structure
+;; 		      setf type variable))
+;; 	(when (documentation sym type)
+;; 	  (if (member type '(compiler-macro function method-combination setf))
+;; 	      (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
+;; 		      sym
+;; 		      (when #1=(arglist sym) (if (consp #1#) #1# (list #1#)))
+;; 		      type
+;; 		      (documentation sym type))
+;; 	      (format t "~&~A > ~A~% ~<~A~%~%~>" sym type (documentation sym type))))))))
+
+;; (defun exs (&optional (package *package*))
+;;   "Print the external symbols of package."
+;;   (let (ss)
+;;     (do-external-symbols (s package)
+;;       (push s ss))
+;;     (format t "~{~A, ~}" (sort ss #'string<))))
+
+(defmacro exs (&optional (package *package*))
   "Print the external symbols of package."
-  (let (ss)
-    (do-external-symbols (s package)
-      (push s ss))
-    (format t "~{~A, ~}" (sort ss #'string<))))
+  (with-gensyms (ss s)
+    `(let (,ss)
+       (do-external-symbols (,s ',(ensure-unquoted package))
+	 (push ,s ,ss))
+       (format t "~{~A, ~}" (sort ,ss #'string<)))))
 
 (defun exfns (&optional (package *package*))
+  "Print the external fboundp symbols of a package."
   (let (fns)
     (do-external-symbols (fn package)
       (when (fboundp fn)
@@ -46,35 +133,25 @@
     (format t "~{~A, ~}" (sort fns #'string<))))
 
 (defun excs (&optional (package *package*))
+  "Print the external symbols for which find-class is truthy."
   (let (classes)
     (do-external-symbols (class package)
       (when (find-class class nil)
 	(push class classes)))
     (format t "~{~A, ~}" (sort classes #'string<))))
 
-#+sbcl
+#+(or sbcl ccl)
 (defun exts (&optional (package *package*))
+  "Print the external symbols which are type specifiers."
   (let (types)
     (do-external-symbols (type package)
-      (when (sb-ext:valid-type-specifier-p type)
+      (when (first-form #+sbcl(sb-ext:valid-type-specifier-p type)
+			#+ccl(ccl:type-specifier-p type))
 	(push type types)))
     (format t "~{~A, ~}" (sort types #'string<))))
 
-(defmacro with-gensyms ((&rest names) &body body)
-  `(let ,(loop for n in names collect `(,n (gensym ,(concatenate 'string (symbol-name n) "-"))))
-     ,@body))
-
-(defmacro doc (func)
-  "Print any documentation for the symbol.
-Use variable, function, structure, type, compiler macro, method combinationor, or setf."
-  (with-gensyms (arguments)
-    (setf arguments (list 'compiler-macro 'method-combination 'variable 'function 'structure 'type 'setf))
-    (loop for arg in arguments do
-	  (when (documentation func arg)
-	    (format t "~a:::  ~s~%~%" arg (documentation func arg))))))
-
 (defun trace-package (&optional (package *package*) (inheritedp nil))
-  "Trace all of the symbols in *package*. Don't trace :cl or :cl-user"
+  "Trace all of the symbols in *package*. Don't trace :cl or :cl-user."
   (let ((pac (find-package package)))
     (loop for sym being the symbols in pac when 
 	  (if inheritedp
@@ -82,10 +159,18 @@ Use variable, function, structure, type, compiler macro, method combinationor, o
 	      (eq pac (symbol-package sym)))
 	  do (ignore-errors (eval `(trace  ,sym))))))
 
-(defun print-hash (hash-table)
-  "Print the hash table as: Key, Value~% "
-  (loop for k being the hash-keys in hash-table
-	do (format t "~A, ~A~%" k (gethash k hash-table))))
+(defun nic (package-name nick-symbol)
+  "Add an additional nickname to package."
+  (let ((old-nicknames (package-nicknames package-name)))
+    (if (and (find-package nick-symbol)
+	     (not (eq (find-package nick-symbol)
+		      (find-package package-name))))
+	(format t "Not adding that nick because it belongs to ~A~%"
+		(find-package nick-symbol))
+	(rename-package package-name package-name
+			(cons nick-symbol old-nicknames)))))
+
+;;;; Symbol Utilities
 
 (defmacro deflex (var val &optional (doc nil docp))    
   "Define a top level (global) lexical VAR with initial value VAL,
@@ -125,50 +210,27 @@ Use variable, function, structure, type, compiler macro, method combinationor, o
   ;;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
   ;;; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 )
-(defun de (&rest rest)
-  "Shortening of describe. A Rob Warnock function."
-  (apply #'describe rest)) 
 
 (defmacro lex (&rest args)
   "Shortening of deflex: define a global lexical variable."
   `(deflex  ,@args))
 
-(defmacro first-form (&rest forms)
-  "Return the first form; useful when you want one of multiple possible 
-conditionally read forms."
-  (first forms))
+(defun de (&rest rest)
+  "Shortening of describe. A Rob Warnock function."
+  (apply #'describe rest))
 
-(defmacro dev (package)
-  "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
-For use at the repl. Mnemonic for develop."
-  `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',package))
-		      #+asdf(asdf:load-system ',package))
-	  (in-package ,package)
-	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (if (find-symbol (symbol-name sym))
-		(format t "~&Left behind ~A to avoid conflict.~%" sym)
-		(import sym)))))
+(defmacro doc (func)
+  "Print any documentation for the symbol.
+Includes variable, function, structure, type, compiler macro, method
+ combination, and setf documentation."
+  `(loop for arg in '(compiler-macro method-combination variable
+		      function structure type setf)
+	 when (documentation ',func arg) do
+	 (format t "~a: ~s~%~%" arg (documentation ',func arg))))
 
-(defun ensure-unqouted (form)
-  "If form is quoted, remove one level of quoting. Otherwise return form.
-This is a useful convenience for macros which be passed a quoted symbol."
-  (if (and (listp form) (eq (car form) 'quote))
-      (second form)
-      form))
-
-(defmacro bring (package)
-  "Load the package. Import the package's exported symbols that don't conflict.
-For use at the repl."
-  (with-gensyms (gpackage)
-    `(let ((,gpackage ',(ensure-unqouted package)))
-       (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))
-		   #+asdf (asdf:load-system ,gpackage))
-       (let ((,gpackage (find-package ,gpackage)))
-	 (do-external-symbols (sym ,gpackage)
-	   (if (find-symbol (symbol-name sym))
-	       (unless (eq (symbol-package sym) ,gpackage)
-		 (format t "~&Left behind ~A to avoid conflict.~%" sym))
-	       (import sym)))))))
+;;;; Advice
+;;; TODO: these advice functions are all alpha quality, and I need to review
+;;; the history of functionality typically given with advice functions.
 
 (defvar *advised-functions* (make-hash-table))
 
@@ -280,7 +342,6 @@ Implementations taken from slime."
 		 (segment-reader stream ch (- n 1))))
 	(push curr chars)))))
 
-;have to fix his damn !
 #+cl-ppcre
 (defmacro match-mode-ppcre-lambda-form (args)
   (with-gensyms (string)
@@ -321,45 +382,35 @@ Implementations taken from slime."
   (set-dispatch-macro-character #\# #\~ #'|#~-reader|))
 
 #+(and ccl cl-ppcre)
-(defun |# -reader| (stream sub-char numarg)
-  (declare (ignore sub-char numarg))
-  (with-gensyms (proc s final)
-    (declare (ignorable s));; silence compiler
-    (let ((command (with-output-to-string (string)
-		     (loop (let ((ch (read-char stream)))
-			     (if (member ch '(#\ #\# #\Newline) :test #'char=)
-				 (return string)
-				 (write-char ch string))))))
-	  (s (make-array '(0) :element-type 'base-char :fill-pointer 0 :adjustable t)))
-      `(let ((,proc
-	     (with-output-to-string (,final ,s)
-	       (ccl::run-program "/bin/sh" (list "-c" ,command) :output ,final))))
-	(values ,s ,proc)))))
-
 ;; (defun |# -reader| (stream sub-char numarg)
 ;;   (declare (ignore sub-char numarg))
-;;   (destructuring-bind (program . options)
-;;       (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
-;;     (when (string-equal program "ls")
-;;       (push "--color=yes" options))
-;;     (ccl::run-program program options :output *standard-output*)))
+;;   (with-gensyms (proc s final)
+;;     (declare (ignorable s));; silence compiler
+;;     (let ((command (with-output-to-string (string)
+;; 		     (loop (let ((ch (read-char stream)))
+;; 			     (if (member ch '(#\ #\# #\Newline) :test #'char=)
+;; 				 (return string)
+;; 				 (write-char ch string))))))
+;; 	  (s (make-array '(0) :element-type 'base-char :fill-pointer 0 :adjustable t)))
+;;       `(let ((,proc
+;; 	     (with-output-to-string (,final ,s)
+;; 	       (ccl::run-program "/bin/sh" (list "-c" ,command) :output ,final))))
+;; 	(values ,s ,proc)))))
+
+(defun |# -reader| (stream sub-char numarg)
+  (declare (ignore sub-char numarg))
+  (destructuring-bind (program . options)
+      (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
+    (when (string-equal program "ls")
+      (push "--color=yes" options))
+    (ccl::run-program program options :output *standard-output*)))
 
 
 #+(and ccl cl-ppcre)
 (defun enable-run-reader ()
   (set-dispatch-macro-character #\# #\  #'|# -reader|))
-                                                                
 
-(defun nic (package-name nick-symbol)
-  "Add an additional nickname to package."
-  (let ((old-nicknames (package-nicknames package-name)))
-    (if (and (find-package nick-symbol)
-	     (not (eq (find-package nick-symbol)
-		      (find-package package-name))))
-	(format t "Not adding that nick because it belongs to ~A~%"
-		(find-package nick-symbol))
-	(rename-package package-name package-name
-			(cons nick-symbol old-nicknames)))))
+;;;; Miscellaneous                                                                
 
 #+quicklisp
 (defun dependency-locations (system-name)
@@ -372,7 +423,7 @@ Implementations taken from slime."
 
 
 (defmacro dbgv ((&optional (where "DEBUG") 
-                           (stream *standard-output*)) 
+                           (stream '*standard-output*)) 
                 &body forms) 
   "Execute FORMS like PROGN, but print each form and its result to the 
 STREAM."
@@ -381,9 +432,15 @@ STREAM."
   (with-gensyms (result) 
     `(let (,result) 
        (progn 
-         (format ,stream "~&DBGV: @~a:~%" ',where) 
+         (format ,stream "~&DBGV at: ~a:~%" ,where) 
          ,@(loop for form in forms 
               collect `(progn 
                          (setf ,result (multiple-value-list ,form)) 
-                         (format t "~s = ~{~s~^, ~}~%" ',form ,result))) 
-         (values-list ,result))))) 
+                         (format t "~&~s = ~{~s~^, ~}~%" ',form ,result))) 
+         (values-list ,result)))))
+
+(defun print-hash (hash-table)
+  "Print the hash table as: Key, Value~% "
+  (loop for k being the hash-keys in hash-table
+	do (format t "~A, ~A~%" k (gethash k hash-table))))
+
