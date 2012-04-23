@@ -93,7 +93,7 @@ For use at the repl."
 (defmacro exfns (&optional (package *package*))
   "Print the external fboundp symbols of a package."
   (with-gensyms (fns fn)
-    `(let (fns)
+    `(let (,fns)
        (do-external-symbols (,fn ',(ensure-unquoted package))
 	 (when (fboundp ,fn)
 	   (push ,fn ,fns)))
@@ -207,9 +207,12 @@ Includes variable, function, structure, type, compiler macro, method
 ;;; TODO: these advice functions are all alpha quality, and I need to review
 ;;; the history of functionality typically given with advice functions.
 
-(defvar *advised-functions* (make-hash-table))
+(defvar *advised-functions* (make-hash-table :test #'eq)
+  "Hash table of [Key <> Value] of 
+[symbol-of-advised-function <> symbol-function-before-advice]")
 
 (defun advisedp (symbol)
+  "Returns true if symbol has advice attached."
   (nth-value 1 (gethash symbol *advised-functions*)))
 
 (defun add-advice (symbol advice &optional afterp)
@@ -229,14 +232,16 @@ the symbol-function is called on them."
 		(apply old-fn args)))))))
 
 (defun remove-advice (&rest functions)
-  "Clear the advice from the given functions."
-  (loop for fn in functions do
-	(progn (setf (symbol-function fn) (gethash fn *advised-functions*))
-	       (remhash fn *advised-functions*))))
+  "Clear all advice from given functions, or from all functions if none named."
+  (if functions
+      (loop for fn in functions do
+	    (progn (setf (symbol-function fn) (gethash fn *advised-functions*))
+		   (remhash fn *advised-functions*)))
+      (progn (maphash (lambda (fn-symbol unadvised-fn)
+			(setf (symbol-function fn-symbol) unadvised-fn))
+		      *advised-functions*)
+	     (clrhash *advised-functions*))))
 
-;; TODO find dependency locations, eg
-;; (mapcar (lambda (x) (ql:where-is-system (string-downcase (symbol-name x)))) (cdadr (asdf:component-depends-on 'asdf:load-op (asdf:find-system 'algorithms))))
-;; but without ql?
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #+sbcl (require 'sb-introspect)
 ;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure it. 
@@ -305,7 +310,45 @@ Implementations taken from slime."
 	   (if winp args :not-available))
    :not-available))
 
-;;;; Regex syntax, stolen whole cloth from Let Over Lambda
+;;;; Miscellaneous                                                                
+
+(defmacro dbgv ((&optional (where "DEBUG") 
+                           (stream '*standard-output*)) 
+                &body forms) 
+  "Print WHERE, execute FORMS, and print each form and its result to the STREAM."
+  ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
+  ;; Alteration of Maciej Katafiasz's alteration of a Rob Warnock utility
+  (with-gensyms (result) 
+    `(let (,result) 
+       (progn 
+         (format ,stream "~&DBGV at: ~a:~%" ,where) 
+         ,@(loop for form in forms 
+              collect `(progn 
+                         (setf ,result (multiple-value-list ,form)) 
+                         (format ,stream "~&~s = ~{~s~^, ~}~%" ',form ,result))) 
+         (values-list ,result)))))
+
+(defun print-hash (hash-table)
+  "Print the hash table as: Key, Value~% "
+  (loop for k being the hash-keys in hash-table
+	do (format t "~A, ~A~%" k (gethash k hash-table))))
+
+;; TODO find dependency locations, eg
+;; (mapcar (lambda (x) (ql:where-is-system (string-downcase (symbol-name x)))) (cdadr (asdf:component-depends-on 'asdf:load-op (asdf:find-system 'algorithms))))
+;; but without ql?
+#+quicklisp
+(defun dependency-locations (system-name)
+  "Takes a string as system-name. Only \"works\" and only on QL systmes."
+  (labels ((rec (deplist)
+	     (if (consp deplist)
+		 (progn (rec (car deplist)) (rec (cdr deplist)))
+	         (when deplist (print (ql:where-is-system
+				       (ql::system-file-name deplist)))))))
+    (rec (ql::dependency-tree system-name))))
+
+;;;; Reader Extensions -- still experimental
+
+;;; Regex syntax, stolen whole cloth from Let Over Lambda
 
 (defun segment-reader (stream ch n)
   (when (> n 0)
@@ -356,6 +399,8 @@ Implementations taken from slime."
 (defun enable-ppcre-reader ()
   (set-dispatch-macro-character #\# #\~ #'|#~-reader|))
 
+;;; Run-program Reader
+
 #+(and ccl cl-ppcre)
 ;; (defun |# -reader| (stream sub-char numarg)
 ;;   (declare (ignore sub-char numarg))
@@ -385,37 +430,4 @@ Implementations taken from slime."
 (defun enable-run-reader ()
   (set-dispatch-macro-character #\# #\  #'|# -reader|))
 
-;;;; Miscellaneous                                                                
-
-#+quicklisp
-(defun dependency-locations (system-name)
-  (labels ((rec (deplist)
-	     (if (consp deplist)
-		 (progn (rec (car deplist)) (rec (cdr deplist)))
-	         (when deplist (print (ql:where-is-system
-				       (ql::system-file-name deplist)))))))
-    (rec (ql::dependency-tree system-name))))
-
-
-(defmacro dbgv ((&optional (where "DEBUG") 
-                           (stream '*standard-output*)) 
-                &body forms) 
-  "Execute FORMS like PROGN, but print each form and its result to the 
-STREAM."
-  ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
-  ;; Alteration of Maciej Katafiasz's alteration of a Rob Warnock utility
-  (with-gensyms (result) 
-    `(let (,result) 
-       (progn 
-         (format ,stream "~&DBGV at: ~a:~%" ,where) 
-         ,@(loop for form in forms 
-              collect `(progn 
-                         (setf ,result (multiple-value-list ,form)) 
-                         (format t "~&~s = ~{~s~^, ~}~%" ',form ,result))) 
-         (values-list ,result)))))
-
-(defun print-hash (hash-table)
-  "Print the hash table as: Key, Value~% "
-  (loop for k being the hash-keys in hash-table
-	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
