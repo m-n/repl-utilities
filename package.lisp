@@ -19,6 +19,7 @@
    #:advisedp				; 
    #:de
    #:nic
+   #+quicklisp
    #:dependency-locations
    #:*advised-functions*
    #:dbgv
@@ -26,8 +27,5 @@
    #:exfns
    #:excs
    #:exts
-   ;; coming soon? 
-;   #:enable-ppcre-reader
-;   #:enable-run-reader
-))
+   ))
 

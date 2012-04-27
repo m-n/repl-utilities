@@ -3,7 +3,7 @@
 (in-package #:repl-utilities)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; this may be called in macro definitions
+  ;; these may be called in macro definitions
   (defun ensure-unquoted (form) 
     "If form is quoted, remove one level of quoting. Otherwise return form.
 This is a useful for defining convenience for macros which may be passed a
@@ -120,7 +120,9 @@ For use at the repl."
       (format t "~{~A, ~}" (sort ,types #'string<)))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
-  "Trace all of the symbols in *package*. Don't trace :cl or :cl-user."
+  "Trace all of the symbols in *package*. 
+
+Don't trace :cl or use inheritedp on a package which uses it."
   (with-gensyms (pac sym)
     `(let ((,pac (find-package ',(ensure-unquoted package))))
       (loop for ,sym being the symbols in ,pac when 
@@ -244,7 +246,7 @@ the symbol-function is called on them."
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #+sbcl (require 'sb-introspect)
-;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure it. 
+;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure.
   #+(or clisp ecl scl) (require 'ext)
   #+abcl (require 'sys)
   #+allegro (require 'excl)
@@ -316,8 +318,8 @@ Implementations taken from slime."
                            (stream '*standard-output*)) 
                 &body forms) 
   "Print WHERE, execute FORMS, and print each form and its result to the STREAM."
-  ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
   ;; Alteration of Maciej Katafiasz's alteration of a Rob Warnock utility
+  ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
   (with-gensyms (result) 
     `(let (,result) 
        (progn 
@@ -336,6 +338,7 @@ Implementations taken from slime."
 ;; TODO find dependency locations, eg
 ;; (mapcar (lambda (x) (ql:where-is-system (string-downcase (symbol-name x)))) (cdadr (asdf:component-depends-on 'asdf:load-op (asdf:find-system 'algorithms))))
 ;; but without ql?
+
 #+quicklisp
 (defun dependency-locations (system-name)
   "Takes a string as system-name. Only \"works\" and only on QL systmes."
@@ -345,89 +348,5 @@ Implementations taken from slime."
 	         (when deplist (print (ql:where-is-system
 				       (ql::system-file-name deplist)))))))
     (rec (ql::dependency-tree system-name))))
-
-;;;; Reader Extensions -- still experimental
-
-;;; Regex syntax, stolen whole cloth from Let Over Lambda
-
-(defun segment-reader (stream ch n)
-  (when (> n 0)
-    (let (chars)
-      (do ((curr (read-char stream)
-		 (read-char stream)))
-	  ((char= ch curr) 
-	   (cons (coerce (nreverse chars) 'string)
-		 (segment-reader stream ch (- n 1))))
-	(push curr chars)))))
-
-#+cl-ppcre
-(defmacro match-mode-ppcre-lambda-form (args)
-  (with-gensyms (string)
-    ``(lambda (,',string)
-	(cl-ppcre:scan
-	 ,(first ,args)
-	 ,',string))))
-
-#+cl-ppcre
-(defmacro subst-mode-ppcre-lambda-form (args)
-  (with-gensyms (string gargs)
-    ``(lambda (,',string)
-	(let ((,',gargs ',,args))
-	  (cl-ppcre:regex-replace-all
-	   (first ,',gargs)
-	   ,',string
-	   (second ,',gargs))))))
-
-#+cl-ppcre
-(defun |#~-reader| (stream sub-char numarg)
-  (declare (ignore sub-char numarg))
-  (let ((mode-char (read-char stream)))
-    (cond
-      ((char= mode-char #\m)
-         (match-mode-ppcre-lambda-form
-           (segment-reader stream
-                           (read-char stream)
-                           1)))
-      ((char= mode-char #\s)
-         (subst-mode-ppcre-lambda-form
-           (segment-reader stream
-                           (read-char stream)
-                           2)))
-      (t (error "Unknown #~~ mode character")))))
-
-#+cl-ppcre
-(defun enable-ppcre-reader ()
-  (set-dispatch-macro-character #\# #\~ #'|#~-reader|))
-
-;;; Run-program Reader
-
-#+(and ccl cl-ppcre)
-;; (defun |# -reader| (stream sub-char numarg)
-;;   (declare (ignore sub-char numarg))
-;;   (with-gensyms (proc s final)
-;;     (declare (ignorable s));; silence compiler
-;;     (let ((command (with-output-to-string (string)
-;; 		     (loop (let ((ch (read-char stream)))
-;; 			     (if (member ch '(#\ #\# #\Newline) :test #'char=)
-;; 				 (return string)
-;; 				 (write-char ch string))))))
-;; 	  (s (make-array '(0) :element-type 'base-char :fill-pointer 0 :adjustable t)))
-;;       `(let ((,proc
-;; 	     (with-output-to-string (,final ,s)
-;; 	       (ccl::run-program "/bin/sh" (list "-c" ,command) :output ,final))))
-;; 	(values ,s ,proc)))))
-
-(defun |# -reader| (stream sub-char numarg)
-  (declare (ignore sub-char numarg))
-  (destructuring-bind (program . options)
-      (cl-ppcre:all-matches-as-strings "([^ ]+)" (read-line stream))
-    (when (string-equal program "ls")
-      (push "--color=yes" options))
-    (ccl::run-program program options :output *standard-output*)))
-
-
-#+(and ccl cl-ppcre)
-(defun enable-run-reader ()
-  (set-dispatch-macro-character #\# #\  #'|# -reader|))
 
 

@@ -1,22 +1,24 @@
-A set of utilities to make life at the repl easier.
+* REPL-Utilities
 
-Tested on SBCL and CCL, further porting should be trivial. 
+REPL-Utilities is a set of utilities which ease life at the repl. It is
+tested on SBCL and CCL, and further porting should be trivial. 
 
-Meant to be autoloaded and use-packaged by your lisps init file.
+For best effect load this package and use-package it from your lisp's init file.
 
-My favorite operator in here is deflexical, taken from Rob Warnock and aliased
-to lex. It defines a global lexical variable -- this lets you use test variables
-without earmuffs:
+My favorite operator in here is deflex, taken from Rob Warnock and aliased
+to lex. It defines a global lexical variable -- this lets you use temporary test variables without earmuffs safely:
 
-(defvar *x* (list 1 2 3)) ; old, painful
+(defvar *x* (list 1 2 3)) 
+(mapcar #'print *x*) ; painful
 
-(lex x (list 1 2 3)) ; better
+(lex x (list 1 2 3)) 
+(mapcar #'print x) ; better
 
 If you wish to in-package another package at the repl in the course of
 developing it, you can retain access to these repl-utilities by using DEV
-instead of  in-package to load and swap to the new package. DEV will import
-the repl-utilities symbols into the new package, if they won't cause name
-conflicts.
+instead of asdf:load-system and in-package to load and swap to the new
+package. DEV will import the repl-utilities symbols into the new package, if
+they won't cause name conflicts.
 
 Following the lead of cl:in-package, the package introspection and management
 operators have been defined as macros so that they can take unquoted symbols
