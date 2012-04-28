@@ -339,14 +339,15 @@ Implementations taken from slime."
 ;; (mapcar (lambda (x) (ql:where-is-system (string-downcase (symbol-name x)))) (cdadr (asdf:component-depends-on 'asdf:load-op (asdf:find-system 'algorithms))))
 ;; but without ql?
 
-#+quicklisp
-(defun dependency-locations (system-name)
-  "Takes a string as system-name. Only \"works\" and only on QL systmes."
-  (labels ((rec (deplist)
-	     (if (consp deplist)
-		 (progn (rec (car deplist)) (rec (cdr deplist)))
-	         (when deplist (print (ql:where-is-system
-				       (ql::system-file-name deplist)))))))
-    (rec (ql::dependency-tree system-name))))
+;#+quicklisp
+
+;; (defun dependency-locations (system-name)
+;;   "Takes a string as system-name. Only \"works\" and only on QL systmes."
+;;   (labels ((rec (deplist)
+;; 	     (if (consp deplist)
+;; 		 (progn (rec (car deplist)) (rec (cdr deplist)))
+;; 	         (when deplist (print (ql:where-is-system
+;; 				       (ql::system-file-name deplist)))))))
+;;     (rec (ql::dependency-tree system-name))))
 
 

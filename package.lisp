@@ -19,8 +19,8 @@
    #:advisedp				; 
    #:de
    #:nic
-   #+quicklisp
-   #:dependency-locations
+;   #+quicklisp
+;   #:dependency-locations
    #:*advised-functions*
    #:dbgv
    #:exs

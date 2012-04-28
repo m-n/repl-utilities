@@ -76,9 +76,6 @@ For use at the repl.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation.
 
-(DEPENDENCY-LOCATIONS system-name) > function
- Takes a string as system-name. Only "works" and only on QL systmes.
-
 (EXTS &optional (package *package*)) > function
  Print the external symbols which are type specifiers.
 
