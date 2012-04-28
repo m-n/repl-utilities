@@ -1,5 +1,3 @@
-* REPL-Utilities
-
 REPL-Utilities is a set of utilities which ease life at the repl. It is
 tested on SBCL and CCL, and further porting should be trivial. 
 
