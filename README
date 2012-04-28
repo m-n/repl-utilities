@@ -87,13 +87,17 @@ Includes variable, function, structure, type, compiler macro, method
 the symbol-function is called on them.
 
 (TRACE-PACKAGE &optional (package *package*) (inheritedp nil)) > function
- Trace all of the symbols in *package*. Don't trace :cl or :cl-user.
+ Trace all of the symbols in *package*. 
+
+Don't trace :cl or use inheritedp on a package which uses it.
 
 (NIC package-name nick-symbol) > function
  Add an additional nickname to package.
 
-(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > function
+(DBGV (&optional (where debug)
+       (stream '*standard-output*)) &body forms) > function
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
 (README &optional (package *package*)) > function
  Print the documentation on the exported functions of a package.
+
