@@ -52,7 +52,7 @@ for the exported symbols of a package.
  Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
 For use at the repl. Mnemonic for develop.
 
-(BRING package) > function
+(BRING package &optional (shadowing-import nil)) > function
  Load the package. Import the package's exported symbols that don't conflict.
 For use at the repl.
 
@@ -70,6 +70,11 @@ For use at the repl.
 
 (REMOVE-ADVICE &rest functions) > function
  Clear all advice from given functions, or from all functions if none named.
+
+(MAC expr) > function
+ Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
+
+  If expression starts with a quotation, unquotes it first.
 
 (DOC func) > function
  Print any documentation for the symbol.
@@ -91,8 +96,7 @@ Don't trace :cl or use inheritedp on a package which uses it.
 (NIC package-name nick-symbol) > function
  Add an additional nickname to package.
 
-(DBGV (&optional (where debug)
-       (stream '*standard-output*)) &body forms) > function
+(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > function
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
 (README &optional (package *package*)) > function

@@ -39,7 +39,7 @@ For use at the repl. Mnemonic for develop."
 		(format t "~&Left behind ~A to avoid conflict.~%" sym)
 		(import sym)))))
 
-(defmacro bring (package)
+(defmacro bring (package &optional (shadowing-import nil))
   "Load the package. Import the package's exported symbols that don't conflict.
 For use at the repl."
   (with-gensyms (gpackage)
@@ -48,12 +48,14 @@ For use at the repl."
 		   #+asdf (asdf:load-system ,gpackage))
        (let ((,gpackage (find-package ,gpackage)))
 	 (do-external-symbols (sym ,gpackage)
-	   (if (find-symbol (symbol-name sym))
-	       (unless (eq  (symbol-package
-			     (find-symbol (symbol-name sym)))
-			    ,gpackage)
-		 (format t "~&Left behind ~A to avoid conflict.~%" sym))
-	       (import sym)))))))
+	   (if (not ,shadowing-import)
+	       (if (find-symbol (symbol-name sym))
+		   (unless (eq  (symbol-package
+				 (find-symbol (symbol-name sym)))
+				,gpackage)
+		     (format t "~&Left behind ~A to avoid conflict.~%" sym))
+		   (import sym))
+	       (shadowing-import sym)))))))
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
@@ -351,3 +353,10 @@ Implementations taken from slime."
 ;;     (rec (ql::dependency-tree system-name))))
 
 
+(defmacro mac (expr)
+  "Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
+
+  If expression starts with a quotation, unquotes it first."
+  ;; From On Lisp, modified to bind *gensym-counter* and use ensure-unquoted
+  `(let ((*gensym-counter* 0)) ; would setq be preferable?
+    (pprint (macroexpand-1 ',(ensure-unquoted expr)))))
