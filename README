@@ -91,7 +91,7 @@ the symbol-function is called on them.
 (TRACE-PACKAGE &optional (package *package*) (inheritedp nil)) > function
  Trace all of the symbols in *package*. 
 
-Don't trace :cl or use inheritedp on a package which uses it.
+ This won't attempt to trace any symbols in :cl
 
 (NIC package-name nick-symbol) > function
  Add an additional nickname to package.
@@ -101,4 +101,3 @@ Don't trace :cl or use inheritedp on a package which uses it.
 
 (README &optional (package *package*)) > function
  Print the documentation on the exported functions of a package.
-

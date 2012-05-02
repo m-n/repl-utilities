@@ -124,13 +124,15 @@ For use at the repl."
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. 
 
-Don't trace :cl or use inheritedp on a package which uses it."
-  (with-gensyms (pac sym)
-    `(let ((,pac (find-package ',(ensure-unquoted package))))
-      (loop for ,sym being the symbols in ,pac when 
-	    (if ,inheritedp
+ This won't attempt to trace any symbols in :cl"
+  (with-gensyms (pac sym cl)
+    `(let ((,pac (find-package ',(ensure-unquoted package)))
+	   (,cl (find-package :cl)))
+      (loop for ,sym being the symbols in ,pac when
+	    (unless (eq ,cl (symbol-package ,sym))
+	      (if ,inheritedp
 		t
-		(eq ,pac (symbol-package ,sym)))
+		(eq ,pac (symbol-package ,sym))))	    
 	    do (ignore-errors (eval `(trace  ,,sym)))))))
 
 (defmacro nic (package-name nick-symbol)
