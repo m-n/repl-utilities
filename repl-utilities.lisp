@@ -360,5 +360,6 @@ Implementations taken from slime."
 
   If expression starts with a quotation, unquotes it first."
   ;; From On Lisp, modified to bind *gensym-counter* and use ensure-unquoted
-  `(let ((*gensym-counter* 0)) ; would setq be preferable?
+  `(let ((*gensym-counter* 0) ; would setq be preferable?
+	 (*print-case* :downcase))
     (pprint (macroexpand-1 ',(ensure-unquoted expr)))))
