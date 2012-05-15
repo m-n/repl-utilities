@@ -19,14 +19,14 @@
    #:advisedp				; 
    #:de
    #:nic
-;   #+quicklisp
-;   #:dependency-locations
+   #+asdf
+   #:dependency-locations
    #:*advised-functions*
    #:dbgv
    #:exs
    #:exfns
    #:excs
-   #+(or sbcl ccl) ;; needs implementation TYPE-SPECIFIER-P or similar
+   #+(or sbcl ccl) ;; needs implementation specific TYPE-SPECIFIER-P or similar
    #:exts
    #:mac))
 

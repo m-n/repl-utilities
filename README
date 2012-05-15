@@ -81,6 +81,9 @@ For use at the repl.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation.
 
+(DEPENDENCY-LOCATIONS system-name) > function
+ Prints the location of the SYSTEM and the systems needed to asdf:load-op it.
+
 (EXTS &optional (package *package*)) > function
  Print the external symbols which are type specifiers.
 
@@ -100,4 +103,5 @@ the symbol-function is called on them.
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
 (README &optional (package *package*)) > function
- Print the documentation on the exported functions of a package.
+ Print the documentation on the exported symbols of a package.
+

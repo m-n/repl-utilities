@@ -59,7 +59,7 @@ For use at the repl."
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
-  "Print the documentation on the exported functions of a package."
+  "Print the documentation on the exported symbols of a package."
   (with-gensyms (undocumented-symbols sym type)
     `(let (,undocumented-symbols)
        (do-external-symbols (,sym ',(ensure-unquoted package))
@@ -339,21 +339,23 @@ Implementations taken from slime."
   (loop for k being the hash-keys in hash-table
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
-;; TODO find dependency locations, eg
-;; (mapcar (lambda (x) (ql:where-is-system (string-downcase (symbol-name x)))) (cdadr (asdf:component-depends-on 'asdf:load-op (asdf:find-system 'algorithms))))
-;; but without ql?
-
-;#+quicklisp
-
-;; (defun dependency-locations (system-name)
-;;   "Takes a string as system-name. Only \"works\" and only on QL systmes."
-;;   (labels ((rec (deplist)
-;; 	     (if (consp deplist)
-;; 		 (progn (rec (car deplist)) (rec (cdr deplist)))
-;; 	         (when deplist (print (ql:where-is-system
-;; 				       (ql::system-file-name deplist)))))))
-;;     (rec (ql::dependency-tree system-name))))
-
+#+asdf
+(defun dependency-locations (system-name)
+  "Prints the location of the SYSTEM and the systems needed to asdf:load-op it."
+  (let (printed-systems)
+    (labels ((rec (sys)
+	       (setq sys (asdf:find-system sys))
+	       (unless (member sys printed-systems)
+		 (push sys printed-systems)
+		 (print (asdf:component-pathname sys))
+		 (map nil
+		      #'rec
+		      (cdr (find 'asdf:load-op
+				 (asdf:component-depends-on 'asdf:load-op sys)
+				 :key #'car))))))
+      (rec system-name))
+    ;(nreverse printed-systems)
+    ))
 
 (defmacro mac (expr)
   "Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
