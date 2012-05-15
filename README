@@ -1,5 +1,5 @@
 REPL-Utilities is a set of utilities which ease life at the repl. It is
-tested on SBCL and CCL, and further porting should be trivial. 
+tested on SBCL, CCL and CLISP, and further porting should be trivial. 
 
 For best effect load this package and use-package it from your lisp's init file.
 

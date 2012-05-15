@@ -13,7 +13,7 @@
    #:add-advice
    #:remove-advice
    #:readme
-   #-ccl ;; causes a symbol conflict
+   #-(or clisp ccl) ;; causes a symbol conflict
    #:arglist
    #-ccl ;; ditto
    #:advisedp				; 
@@ -26,6 +26,7 @@
    #:exs
    #:exfns
    #:excs
+   #+(or sbcl ccl) ;; needs implementation TYPE-SPECIFIER-P or similar
    #:exts
    #:mac))
 

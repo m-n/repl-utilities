@@ -64,7 +64,7 @@ For use at the repl."
     `(let (,undocumented-symbols)
        (do-external-symbols (,sym ',(ensure-unquoted package))
 	 (unless (some (lambda (doctype) (documentation ,sym doctype))
-		       '(compiler-macro function method-combination
+		       '(compiler-macro function #-clisp method-combination
 			 setf structure type variable))
 	   (push ,sym ,undocumented-symbols)))
        (when ,undocumented-symbols
@@ -73,10 +73,10 @@ For use at the repl."
 		 ,undocumented-symbols))
        (let ((*print-case* :downcase))
 	 (do-external-symbols (,sym ',(ensure-unquoted package))
-	   (dolist (,type '(compiler-macro function method-combination ;structure
+	   (dolist (,type '(compiler-macro function #-clisp method-combination ;structure
 			   setf type variable))
 	     (when (documentation ,sym ,type)
-	       (if (member ,type '(compiler-macro function method-combination setf))
+	       (if (member ,type '(compiler-macro function #-clisp method-combination setf))
 		   (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
 			   ,sym
 			   (when #1=(arglist ,sym) (if (consp #1#) #1# (list #1#)))
@@ -202,7 +202,7 @@ For use at the repl."
   "Print any documentation for the symbol.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation."
-  `(loop for arg in '(compiler-macro method-combination variable
+  `(loop for arg in '(compiler-macro #-clisp method-combination variable
 		      function structure type setf)
 	 when (documentation ',(ensure-unquoted func) arg) do
 	 (format t "~a: ~s~%~%"
@@ -251,7 +251,7 @@ the symbol-function is called on them."
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #+sbcl (require 'sb-introspect)
 ;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure.
-  #+(or clisp ecl scl) (require 'ext)
+;  #+(or clisp ecl scl) (require 'ext)
   #+abcl (require 'sys)
   #+allegro (require 'excl)
   #+lispworks (require 'lw))
