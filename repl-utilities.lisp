@@ -36,7 +36,10 @@ For use at the repl. Mnemonic for develop."
 	  (in-package ,(ensure-unquoted package))
 	  (do-external-symbols (sym (find-package 'repl-utilities))
 	    (if (find-symbol (symbol-name sym))
-		(format t "~&Left behind ~A to avoid conflict.~%" sym)
+		(unless (eq  (symbol-package
+				 (find-symbol (symbol-name sym)))
+			     ,(find-package 'repl-utilities))
+		     (format t "~&Left behind ~A to avoid conflict.~%" sym))
 		(import sym)))))
 
 (defmacro bring (package &optional (shadowing-import nil))
