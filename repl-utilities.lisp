@@ -198,16 +198,17 @@ For use at the repl."
   "Shortening of describe. A Rob Warnock function."
   (apply #'describe rest))
 
-(defmacro doc (func)
+(defmacro doc (symbol &rest ignored-arguments)
   "Print any documentation for the symbol.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation."
+  (declare (ignore ignored-arguments))
   `(loop for arg in '(compiler-macro #-clisp method-combination variable
 		      function structure type setf)
-	 when (documentation ',(ensure-unquoted func) arg) do
+	 when (documentation ',(ensure-unquoted symbol) arg) do
 	 (format t "~a: ~s~%~%"
 		 arg
-		 (documentation ',(ensure-unquoted func) arg))))
+		 (documentation ',(ensure-unquoted symbol) arg))))
 
 ;;;; Advice
 ;;; TODO: these advice functions are all alpha quality, and I need to review
