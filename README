@@ -30,6 +30,9 @@ for the exported symbols of a package.
 
 (readme repl-utilities)
 
+REPL-UTILITIES > ASDF System
+ Ease common tasks at the REPL.
+
 (EXS &optional (package *package*)) > function
  Print the external symbols of package.
 
@@ -50,11 +53,10 @@ for the exported symbols of a package.
 
 (DEV package) > function
  Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
-For use at the repl. Mnemonic for develop.
+Mnemonic for develop.
 
 (BRING package &optional (shadowing-import nil)) > function
  Load the package. Import the package's exported symbols that don't conflict.
-For use at the repl.
 
 *advised-functions* > variable
  Hash table of [Key <> Value] of 
@@ -76,12 +78,12 @@ For use at the repl.
 
   If expression starts with a quotation, unquotes it first.
 
-(DOC func) > function
+(DOC symbol &rest ignored-arguments) > function
  Print any documentation for the symbol.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation.
 
-(DEPENDENCY-LOCATIONS system-name) > function
+(DEPENDENCY-LOCATIONS system-name &optional print-system-names-p) > function
  Prints the location of the SYSTEM and the systems needed to asdf:load-op it.
 
 (EXTS &optional (package *package*)) > function
@@ -104,4 +106,3 @@ the symbol-function is called on them.
 
 (README &optional (package *package*)) > function
  Print the documentation on the exported symbols of a package.
-

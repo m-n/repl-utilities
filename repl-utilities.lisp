@@ -2,33 +2,11 @@
 
 (in-package #:repl-utilities)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; these may be called in macro definitions
-  (defun ensure-unquoted (form) 
-    "If form is quoted, remove one level of quoting. Otherwise return form.
-This is a useful for defining convenience for macros which may be passed a
-quoted or unquoted symbol."
-    (if (and (listp form) (eq (car form) 'cl:quote))
-	(second form)
-	form))
-
-  (defmacro with-gensyms ((&rest names) &body body)
-    `(let ,(loop for n in names collect
-		 ;; (SYMBOL-NAME #:SYMBOL-NAME-2983)
-		 `(,n (gensym ,(concatenate 'string (symbol-name n) "-"))))
-       ,@body))
-  
-  (defmacro first-form (&rest forms)
-    "Return the first form; useful when you want one of multiple possible 
-conditionally read forms."
-    (first forms))
-  ) ; end eval-when
-
 ;;;; Package Utilities
 
 (defmacro dev (package)
   "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
-For use at the repl. Mnemonic for develop."
+Mnemonic for develop."
   `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',(ensure-unquoted package)))
 		      #+asdf(asdf:load-system ',(ensure-unquoted package))
 		      (error 'package-error "~&DEV requires either quicklisp or ~
@@ -43,8 +21,7 @@ For use at the repl. Mnemonic for develop."
 		(import sym)))))
 
 (defmacro bring (package &optional (shadowing-import nil))
-  "Load the package. Import the package's exported symbols that don't conflict.
-For use at the repl."
+  "Load the package. Import the package's exported symbols that don't conflict."
   (with-gensyms (gpackage)
     `(let ((,gpackage ',(ensure-unquoted package)))
        (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))
@@ -65,6 +42,26 @@ For use at the repl."
   "Print the documentation on the exported symbols of a package."
   (with-gensyms (undocumented-symbols sym type)
     `(let (,undocumented-symbols)
+       (terpri)
+       (when (documentation (find-package ',(ensure-unquoted package)) t)
+	 (format t "~&~A > Package~% ~<~A~%~%~>"
+		 ',(ensure-unquoted package)
+		 (documentation (find-package ',(ensure-unquoted package)) t)))
+       #+asdf
+       (when (and (ignore-errors (asdf:find-system
+				  (string-downcase (package-name
+						    ',(ensure-unquoted package)))))
+		  (ignore-errors
+		   (asdf:system-description
+		    (asdf:find-system
+		     (string-downcase (package-name
+				       ',(ensure-unquoted package)))))))
+	 (format t "~&~A > ASDF System~% ~<~A~%~%~>"
+		 (package-name ',(ensure-unquoted package))
+		 (asdf:system-description
+		    (asdf:find-system
+		     (string-downcase (package-name
+				       ',(ensure-unquoted package)))))))
        (do-external-symbols (,sym ',(ensure-unquoted package))
 	 (unless (some (lambda (doctype) (documentation ,sym doctype))
 		       '(compiler-macro function #-clisp method-combination
@@ -77,7 +74,7 @@ For use at the repl."
        (let ((*print-case* :downcase))
 	 (do-external-symbols (,sym ',(ensure-unquoted package))
 	   (dolist (,type '(compiler-macro function #-clisp method-combination ;structure
-			   setf type variable))
+			    setf type variable))
 	     (when (documentation ,sym ,type)
 	       (if (member ,type '(compiler-macro function #-clisp method-combination setf))
 		   (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
@@ -113,7 +110,7 @@ For use at the repl."
 	  (push ,class ,classes)))
       (format t "~{~A, ~}" (sort ,classes #'string<)))))
 
-#+(or sbcl ccl)
+#+(or sbcl ccl) 
 (defmacro exts (&optional (package *package*))
   "Print the external symbols which are type specifiers."
   (with-gensyms (types type)
@@ -252,74 +249,6 @@ the symbol-function is called on them."
 		      *advised-functions*)
 	     (clrhash *advised-functions*))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  #+sbcl (require 'sb-introspect)
-;  #+(or ccl corman) (require 'ccl) ; uncommenting breaks clozure.
-;  #+(or clisp ecl scl) (require 'ext)
-  #+abcl (require 'sys)
-  #+allegro (require 'excl)
-  #+lispworks (require 'lw))
- 
-(defun arglist (fname)
-  "Return the arglist for the given function name.
-Implementations taken from slime."
-  (first-form
-   #+sbcl (sb-introspect:function-lambda-list fname)
-   #+ccl (multiple-value-bind (arglist binding)
-	     (let ((*break-on-signals* nil))
-	       (ccl:arglist fname))
-	   (declare (ignore binding))
-	   arglist)
-	    #+clisp (block nil
-	     (or (ignore-errors
-		   (let ((exp (function-lambda-expression fname)))
-		     (and exp (return (second exp)))))
-		 (ignore-errors
-		   (return (ext:arglist fname)))
-		 :not-available))
-   #+abcl (cond ((symbolp fun)
-		 (multiple-value-bind (arglist present) 
-		     (sys::arglist fun)
-		   (when (and (not present)
-			      (fboundp fun)
-			      (typep (symbol-function fun) 'standard-generic-function))
-		     (setq arglist
-			   (mop::generic-function-lambda-list (symbol-function fun))
-			   present
-			   t))
-		   (if present arglist :not-available)))
-		(t :not-available))
-   #+allegro (handler-case (excl:arglist symbol)
-	       (simple-error () :not-available))
-   #+cmucl (etypecase fun
-	     (function (function-arglist fun))
-	     (symbol (function-arglist (or (macro-function fun)
-					   (symbol-function fun)))))
-   #+corman (handler-case
-		(cond ((and (symbolp name)
-			    (macro-function name))
-		       (ccl::macro-lambda-list (symbol-function name)))
-		      (t
-		       (when (symbolp name)
-			 (setq name (symbol-function name)))
-		       (if (eq (class-of name) cl::the-class-standard-gf)
-			   (generic-function-lambda-list name)
-			   (ccl:function-lambda-list name))))
-	      (error () :not-available))
-   #+ecl (multiple-value-bind (arglist foundp)
-	     (ext:function-lambda-list name)
-	   (if foundp arglist :not-available))
-   #+lispworks (let ((arglist (lw:function-lambda-list symbol-or-function)))
-		 (etypecase arglist
-		   ((member :dont-know) 
-		    :not-available)
-		   (list
-		    (replace-strings-with-symbols arglist))))
-   #+scl (multiple-value-bind (args winp)
-	     (ext:function-arglist fun)
-	   (if winp args :not-available))
-   :not-available))
-
 ;;;; Miscellaneous                                                                
 
 (defmacro dbgv ((&optional (where "DEBUG") 
@@ -344,14 +273,16 @@ Implementations taken from slime."
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
 #+asdf
-(defun dependency-locations (system-name)
+(defun dependency-locations (system-name &optional print-system-names-p)
   "Prints the location of the SYSTEM and the systems needed to asdf:load-op it."
   (let (printed-systems)
     (labels ((rec (sys)
 	       (setq sys (asdf:find-system sys))
 	       (unless (member sys printed-systems)
 		 (push sys printed-systems)
-		 (print (asdf:component-pathname sys))
+		 (format t "~&~S" (asdf:component-pathname sys))
+		 (when print-system-names-p
+		   (format t ", ~A~&"  (slot-value sys 'asdf::name)))
 		 (map nil
 		      #'rec
 		      (cdr (find 'asdf:load-op
