@@ -273,8 +273,13 @@ the symbol-function is called on them."
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
 #+asdf
-(defun dependency-locations (system-name &optional print-system-names-p)
-  "Prints the location of the SYSTEM and the systems needed to asdf:load-op it."
+(defun dependency-locations (system-name &optional
+					   print-system-names-p
+					   (operation 'asdf:load-op))
+  "Print the pathname of the system and of the systems needed to operation it.
+
+  Operation should be a symbol naming an operation recognized by
+  asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op."
   (let (printed-systems)
     (labels ((rec (sys)
 	       (setq sys (asdf:find-system sys))
@@ -285,8 +290,8 @@ the symbol-function is called on them."
 		   (format t ", ~A~&"  (slot-value sys 'asdf::name)))
 		 (map nil
 		      #'rec
-		      (cdr (find 'asdf:load-op
-				 (asdf:component-depends-on 'asdf:load-op sys)
+		      (cdr (find operation
+				 (asdf:component-depends-on operation sys)
 				 :key #'car))))))
       (rec system-name))
     ;(nreverse printed-systems)

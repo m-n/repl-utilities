@@ -83,8 +83,11 @@ Mnemonic for develop.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation.
 
-(DEPENDENCY-LOCATIONS system-name &optional print-system-names-p) > function
- Prints the location of the SYSTEM and the systems needed to asdf:load-op it.
+(DEPENDENCY-LOCATIONS system-name &optional print-system-names-p operation) > function
+ Print the pathname of the system and of the systems needed to operation it.
+
+  Operation should be a symbol naming an operation recognized by
+  asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op.
 
 (EXTS &optional (package *package*)) > function
  Print the external symbols which are type specifiers.
@@ -106,3 +109,4 @@ the symbol-function is called on them.
 
 (README &optional (package *package*)) > function
  Print the documentation on the exported symbols of a package.
+
