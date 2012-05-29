@@ -287,7 +287,7 @@ the symbol-function is called on them."
 		 (push sys printed-systems)
 		 (format t "~&~S" (asdf:component-pathname sys))
 		 (when print-system-names-p
-		   (format t ", ~A~&"  (slot-value sys 'asdf::name)))
+		   (format t ", ~A~&"  (asdf:component-name sys)))
 		 (map nil
 		      #'rec
 		      (cdr (find operation
