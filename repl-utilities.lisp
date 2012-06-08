@@ -80,7 +80,7 @@ Mnemonic for develop."
 		   (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
 			   ,sym
 			   (when #1=(arglist ,sym) (if (consp #1#) #1# (list #1#)))
-			   ,type
+			   (if (macro-function ,sym) 'macro ,type)
 			   (documentation ,sym ,type))
 		   (format t "~&~A > ~A~% ~<~A~%~%~>" ,sym ,type (documentation ,sym ,type))))))))))
 

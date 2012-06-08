@@ -33,36 +33,36 @@ for the exported symbols of a package.
 REPL-UTILITIES > ASDF System
  Ease common tasks at the REPL.
 
-(EXS &optional (package *package*)) > function
+(EXS &optional (package *package*)) > macro
  Print the external symbols of package.
 
 (PRINT-HASH hash-table) > function
  Print the hash table as: Key, Value~% 
 
-(LEX &rest args) > function
+(LEX &rest args) > macro
  Shortening of deflex: define a global lexical variable.
 
-(EXFNS &optional (package *package*)) > function
+(EXFNS &optional (package *package*)) > macro
  Print the external fboundp symbols of a package.
 
-(EXCS &optional (package *package*)) > function
+(EXCS &optional (package *package*)) > macro
  Print the external symbols for which find-class is truthy.
 
 (DE &rest rest) > function
  Shortening of describe. A Rob Warnock function.
 
-(DEV package) > function
+(DEV package) > macro
  Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
 Mnemonic for develop.
 
-(BRING package &optional (shadowing-import nil)) > function
+(BRING package &optional (shadowing-import nil)) > macro
  Load the package. Import the package's exported symbols that don't conflict.
 
 *advised-functions* > variable
  Hash table of [Key <> Value] of 
 [symbol-of-advised-function <> symbol-function-before-advice]
 
-(DEFLEX var val &optional (doc nil docp)) > function
+(DEFLEX var val &optional (doc nil docp)) > macro
  Define a top level (global) lexical VAR with initial value VAL,
   which is assigned unconditionally as with DEFPARAMETER. If a DOC
   string is provided, it is attached to both the name |VAR| and the
@@ -73,12 +73,12 @@ Mnemonic for develop.
 (REMOVE-ADVICE &rest functions) > function
  Clear all advice from given functions, or from all functions if none named.
 
-(MAC expr) > function
+(MAC expr) > macro
  Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
 
   If expression starts with a quotation, unquotes it first.
 
-(DOC symbol &rest ignored-arguments) > function
+(DOC symbol &rest ignored-arguments) > macro
  Print any documentation for the symbol.
 Includes variable, function, structure, type, compiler macro, method
  combination, and setf documentation.
@@ -89,24 +89,24 @@ Includes variable, function, structure, type, compiler macro, method
   Operation should be a symbol naming an operation recognized by
   asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op.
 
-(EXTS &optional (package *package*)) > function
+(EXTS &optional (package *package*)) > macro
  Print the external symbols which are type specifiers.
 
 (ADD-ADVICE symbol advice &optional afterp) > function
  Add an 'advice' function to be called on the arguments before or after
 the symbol-function is called on them.
 
-(TRACE-PACKAGE &optional (package *package*) (inheritedp nil)) > function
+(TRACE-PACKAGE &optional (package *package*) (inheritedp nil)) > macro
  Trace all of the symbols in *package*. 
 
  This won't attempt to trace any symbols in :cl
 
-(NIC package-name nick-symbol) > function
+(NIC package-name nick-symbol) > macro
  Add an additional nickname to package.
 
-(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > function
+(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > macro
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
-(README &optional (package *package*)) > function
+(README &optional (package *package*)) > macro
  Print the documentation on the exported symbols of a package.
 
