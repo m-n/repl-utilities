@@ -80,7 +80,7 @@ Mnemonic for develop.
 
 (DOC symbol &rest ignored-arguments) > macro
  Print any documentation for the symbol.
-Includes variable, function, structure, type, compiler macro, method
+Includes variable, function, type, compiler macro, method
  combination, and setf documentation.
 
 (DEPENDENCY-LOCATIONS system-name &optional print-system-names-p operation) > function

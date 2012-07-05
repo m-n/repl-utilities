@@ -30,7 +30,7 @@ Mnemonic for develop."
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
   "Print the documentation on the exported symbols of a package."
-  (with-gensyms (undocumented-symbols sym type)
+  (with-gensyms (undocumented-symbols sym)
     `(let (,undocumented-symbols)
        (terpri)
        (when (documentation (find-package ',(ensure-unquoted package)) t)
@@ -61,18 +61,8 @@ Mnemonic for develop."
 	 (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
                    Documented exported symbols:~%~%"
 		 ,undocumented-symbols))
-       (let ((*print-case* :downcase))
-	 (do-external-symbols (,sym ',(ensure-unquoted package))
-	   (dolist (,type '(compiler-macro function #-clisp method-combination ;structure
-			    setf type variable))
-	     (when (documentation ,sym ,type)
-	       (if (member ,type '(compiler-macro function #-clisp method-combination setf))
-		   (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
-			   ,sym
-			   (when #1=(arglist ,sym) (if (consp #1#) #1# (list #1#)))
-			   (if (macro-function ,sym) 'macro ,type)
-			   (documentation ,sym ,type))
-		   (format t "~&~A > ~A~% ~<~A~%~%~>" ,sym ,type (documentation ,sym ,type))))))))))
+       (do-external-symbols (,sym ',(ensure-unquoted package))
+	 (doc% ,sym)))))
 
 (defmacro exs (&optional (package *package*))
   "Print the external symbols of package."
@@ -190,15 +180,30 @@ Mnemonic for develop."
 
 (defmacro doc (symbol &rest ignored-arguments)
   "Print any documentation for the symbol.
-Includes variable, function, structure, type, compiler macro, method
+Includes variable, function, type, compiler macro, method
  combination, and setf documentation."
   (declare (ignore ignored-arguments))
-  `(loop for arg in '(compiler-macro #-clisp method-combination variable
-		      function structure type setf)
-	 when (documentation ',(ensure-unquoted symbol) arg) do
-	 (format t "~a: ~s~%~%"
-		 arg
-		 (documentation ',(ensure-unquoted symbol) arg))))
+  `(doc% ',(ensure-unquoted symbol)))
+
+(defun doc% (symbol)
+  (let ((*print-case* :downcase))
+    (dolist (type '(compiler-macro function setf type variable ;structure
+		    #-clisp method-combination))
+      (when (documentation symbol type)
+	(if (member type '(compiler-macro function setf
+			   #-clisp method-combination))
+	    (format t "~&(~:@(~A~)~@[~{ ~A~}~]) > ~A~% ~<~A~%~%~>"
+		    symbol
+		    (when #1=(arglist symbol)
+			  (if (consp #1#) #1# (list #1#)))
+		    (if (macro-function symbol)
+			'macro
+			type)
+		    (documentation symbol type))
+	    (format t "~&~A > ~A~% ~<~A~%~%~>"
+		    symbol
+		    type
+		    (documentation symbol type)))))))
 
 ;;;; Advice
 ;;; TODO: these advice functions are all alpha quality, and I need to review
