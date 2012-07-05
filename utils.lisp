@@ -23,6 +23,21 @@ quoted or unquoted symbol."
 conditionally read forms."
   (first forms))
 
+(defun shadowed-import (symbols
+			&optional (package *package*) (print-when-shadowed-p t))
+  "Import each symbol into PACKAGE, unless a symbol of the same name is present.
+  If print-when-shadowed-p is true, print a message for each not-imported 
+  symbol indicating that it was not imported."
+  (dolist (sym (if (consp symbols) symbols (list symbols)) t)
+    (if (find-symbol (symbol-name sym) package)
+	(when (and print-when-shadowed-p
+		   (eq (symbol-package (find-symbol (symbol-name sym)))
+		       package)
+		   (not (eq (symbol-package sym)
+			    package)))
+	  (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))
+	(import sym package))))
+
 ;;;; Portability
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

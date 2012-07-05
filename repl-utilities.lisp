@@ -13,12 +13,7 @@ Mnemonic for develop."
                                              asdf be present."))
 	  (in-package ,(ensure-unquoted package))
 	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (if (find-symbol (symbol-name sym))
-		(unless (eq  (symbol-package
-				 (find-symbol (symbol-name sym)))
-			     ,(find-package 'repl-utilities))
-		     (format t "~&Left behind ~A to avoid conflict.~%" sym))
-		(import sym)))))
+	    (shadowed-import sym *package* t))))
 
 (defmacro bring (package &optional (shadowing-import nil))
   "Load the package. Import the package's exported symbols that don't conflict."
@@ -29,12 +24,7 @@ Mnemonic for develop."
        (let ((,gpackage (find-package ,gpackage)))
 	 (do-external-symbols (sym ,gpackage)
 	   (if (not ,shadowing-import)
-	       (if (find-symbol (symbol-name sym))
-		   (unless (eq  (symbol-package
-				 (find-symbol (symbol-name sym)))
-				,gpackage)
-		     (format t "~&Left behind ~A to avoid conflict.~%" sym))
-		   (import sym))
+	       (shadowed-import sym *package* t)
 	       (shadowing-import sym)))))))
 
 (defmacro readme (&optional (package *package*))
