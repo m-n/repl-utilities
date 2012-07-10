@@ -4,6 +4,13 @@
 
 ;;;; Package Utilities
 
+(defvar *dev-hooks* ()
+  "List of functions to be funcalled after a package is loaded with DEV.
+
+ During execution of these functions *PACKAGE* is already set to the package
+ being loaded, and the repl-utilities symbols which will be imported already
+ are. The functions are called with no arguments.")
+
 (defmacro dev (package)
   "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
 Mnemonic for develop."
@@ -13,7 +20,14 @@ Mnemonic for develop."
                                              asdf be present."))
 	  (in-package ,(ensure-unquoted package))
 	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (shadowed-import sym *package* t))))
+	    (shadowed-import sym *package* t))
+	  (map nil #'funcall *dev-hooks*)))
+
+(defvar *bring-hooks* ()
+  "List of functions to be funcalled after a package is loaded with BRING.
+
+ The functions are called with the package imported by bring as their only 
+ argument.")
 
 (defmacro bring (package &optional (shadowing-import nil))
   "Load the package. Import the package's exported symbols that don't conflict."
@@ -25,7 +39,8 @@ Mnemonic for develop."
 	 (do-external-symbols (sym ,gpackage)
 	   (if (not ,shadowing-import)
 	       (shadowed-import sym *package* t)
-	       (shadowing-import sym)))))))
+	       (shadowing-import sym)))
+	 (map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*)))))
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?

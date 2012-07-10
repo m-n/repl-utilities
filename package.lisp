@@ -4,7 +4,9 @@
   (:use :cl)
   (:export
    #:dev
+   #:*dev-hooks*
    #:bring
+   #:*bring-hooks*
    #:print-hash
    #:doc
    #:trace-package
