@@ -13,7 +13,9 @@
 
 (defmacro dev (package)
   "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
-Mnemonic for develop."
+Mnemonic for develop.
+
+  After swapping to the package map funcall over *dev-hooks*."
   `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',(ensure-unquoted package)))
 		      #+asdf(asdf:load-system ',(ensure-unquoted package))
 		      (error 'package-error "~&DEV requires either quicklisp or ~
@@ -30,7 +32,10 @@ Mnemonic for develop."
  argument.")
 
 (defmacro bring (package &optional (shadowing-import nil))
-  "Load the package. Import the package's exported symbols that don't conflict."
+  "Load the package. Import the package's exported symbols that don't conflict.
+
+  After importing the package funcall each element of *bring-hooks* with the
+  package as its argument."
   (with-gensyms (gpackage)
     `(let ((,gpackage ',(ensure-unquoted package)))
        (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))

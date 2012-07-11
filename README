@@ -36,8 +36,12 @@ REPL-UTILITIES > ASDF System
 (EXS &optional (package *package*)) > macro
  Print the external symbols of package.
 
-(PRINT-HASH hash-table) > function
- Print the hash table as: Key, Value~% 
+*dev-hooks* > variable
+ List of functions to be funcalled after a package is loaded with DEV.
+
+ During execution of these functions *PACKAGE* is already set to the package
+ being loaded, and the repl-utilities symbols which will be imported already
+ are. The functions are called with no arguments.
 
 (LEX &rest args) > macro
  Shortening of deflex: define a global lexical variable.
@@ -55,20 +59,20 @@ REPL-UTILITIES > ASDF System
  Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
 Mnemonic for develop.
 
+  After swapping to the package map funcall over *dev-hooks*.
+
 (BRING package &optional (shadowing-import nil)) > macro
  Load the package. Import the package's exported symbols that don't conflict.
+
+  After importing the package funcall each element of *bring-hooks* with the
+  package as its argument.
 
 *advised-functions* > variable
  Hash table of [Key <> Value] of 
 [symbol-of-advised-function <> symbol-function-before-advice]
 
-(DEFLEX var val &optional (doc nil docp)) > macro
- Define a top level (global) lexical VAR with initial value VAL,
-  which is assigned unconditionally as with DEFPARAMETER. If a DOC
-  string is provided, it is attached to both the name |VAR| and the
-  name *STORAGE-FOR-DEFLEX-VAR-|VAR|* as a documentation string of
-  kind 'VARIABLE. The new VAR will have lexical scope and thus may be
-  shadowed by LET bindings without affecting its dynamic (global) value.
+(PRINT-HASH hash-table) > function
+ Print the hash table as: Key, Value~% 
 
 (REMOVE-ADVICE &rest functions) > function
  Clear all advice from given functions, or from all functions if none named.
@@ -91,6 +95,20 @@ Includes variable, function, type, compiler macro, method
 
 (EXTS &optional (package *package*)) > macro
  Print the external symbols which are type specifiers.
+
+(DEFLEX var val &optional (doc nil docp)) > macro
+ Define a top level (global) lexical VAR with initial value VAL,
+  which is assigned unconditionally as with DEFPARAMETER. If a DOC
+  string is provided, it is attached to both the name |VAR| and the
+  name *STORAGE-FOR-DEFLEX-VAR-|VAR|* as a documentation string of
+  kind 'VARIABLE. The new VAR will have lexical scope and thus may be
+  shadowed by LET bindings without affecting its dynamic (global) value.
+
+*bring-hooks* > variable
+ List of functions to be funcalled after a package is loaded with BRING.
+
+ The functions are called with the package imported by bring as their only 
+ argument.
 
 (ADD-ADVICE symbol advice &optional afterp) > function
  Add an 'advice' function to be called on the arguments before or after
