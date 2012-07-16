@@ -38,6 +38,19 @@ conditionally read forms."
 	  (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))
 	(import sym package))))
 
+(defun load-system-or-print (system-designator &optional control-string
+			  &rest format-args)
+  (handler-case 	      
+      (first-form #+quicklisp (ql:quickload
+			       system-designator)
+		  #+asdf (asdf:load-system system-designator))
+    ((or #+asdf asdf:missing-component
+	 #+quicklisp quicklisp-client::system-not-found )
+      (c)
+      (declare (ignorable c))
+      (when control-string
+	(apply #'format t control-string format-args)))))
+
 ;;;; Portability
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

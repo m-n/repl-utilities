@@ -12,18 +12,31 @@
  are. The functions are called with no arguments.")
 
 (defmacro dev (package)
-  "Load the package, then swap to it. Import repl-utilities exported symbols that don't conflict.
+  "Attempt to ql:quickload or asfd:load-system a system with the same name as
+   package, then swap to the package regardless of whether the load was
+   successful. Import repl-utilities exported symbols that don't cause symbol
+   conflicts into the newly swapped to pacage.
 Mnemonic for develop.
 
   After swapping to the package map funcall over *dev-hooks*."
-  `(progn (first-form #+quicklisp (ql:quickload (symbol-name ',(ensure-unquoted package)))
-		      #+asdf(asdf:load-system ',(ensure-unquoted package))
-		      (error 'package-error "~&DEV requires either quicklisp or ~
-                                             asdf be present."))
-	  (in-package ,(ensure-unquoted package))
-	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (shadowed-import sym *package* t))
-	  (map nil #'funcall *dev-hooks*)))
+  (with-gensyms (gpackage start)
+    `(prog ((,gpackage ',(ensure-unquoted package)))
+	,start
+	(load-system-or-print ,gpackage
+			      "~&Could not find system, ~
+                              attempting to ~
+                              in-package anyway.~%")
+	(restart-case (setq *package* (or (find-package ,gpackage)
+					  (error "No package named ~A found."
+						 ,gpackage)))
+	  (specify-other-package ()
+	    :report "Specify an alternate package name: "
+	    (setq ,gpackage
+		  (ensure-unquoted (read)))
+	    (go ,start)))
+	(do-external-symbols (sym (find-package 'repl-utilities))
+	  (shadowed-import sym *package* t))
+	(map nil #'funcall *dev-hooks*))))
 
 (defvar *bring-hooks* ()
   "List of functions to be funcalled after a package is loaded with BRING.
@@ -32,20 +45,34 @@ Mnemonic for develop.
  argument.")
 
 (defmacro bring (package &optional (shadowing-import nil))
-  "Load the package. Import the package's exported symbols that don't conflict.
+  "Attempt to ql:quickload or asdf:load-system a system with the same name as 
+  package. Regardless of whether the load was successful import the package's
+  exported symbols into the current package. If shadowing-import is nil, only
+  the symbols which won't cause a symbol conflict are imported.
 
   After importing the package funcall each element of *bring-hooks* with the
   package as its argument."
-  (with-gensyms (gpackage)
-    `(let ((,gpackage ',(ensure-unquoted package)))
-       (first-form #+quicklisp (ql:quickload (symbol-name ,gpackage))
-		   #+asdf (asdf:load-system ,gpackage))
-       (let ((,gpackage (find-package ,gpackage)))
-	 (do-external-symbols (sym ,gpackage)
-	   (if (not ,shadowing-import)
-	       (shadowed-import sym *package* t)
-	       (shadowing-import sym)))
-	 (map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*)))))
+  (with-gensyms (gpackage start)
+    `(prog ((,gpackage ',(ensure-unquoted package)))
+	,start
+	(load-system-or-print ,gpackage "~&System not found, attempting ~
+                                       to import symbols from package ~
+                                       ~A if it exists.~%" ,gpackage)
+	(restart-case
+	    (or (find-package ,gpackage)
+		(error "No package named ~A found."
+		       ,gpackage))
+	  (specify-other-package ()
+	    :report
+	    "Specify an alternate package name: "
+	    (setq ,gpackage
+		  (ensure-unquoted (read)))
+	    (go ,start)))
+	(do-external-symbols (sym ,gpackage)
+	  (if (not ,shadowing-import)
+	      (shadowed-import sym *package* t)
+	      (shadowing-import sym)))
+	(map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*))))
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
