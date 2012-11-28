@@ -27,6 +27,7 @@ Mnemonic for develop.
                               attempting to ~
                               in-package anyway.~%")
 	(restart-case (setq *package* (or (find-package ,gpackage)
+					  (find-package (string-upcase (string ,gpackage)))
 					  (error "No package named ~A found."
 						 ,gpackage)))
 	  (specify-other-package ()
@@ -60,6 +61,7 @@ Mnemonic for develop.
                                        ~A if it exists.~%" ,gpackage)
 	(restart-case
 	    (or (find-package ,gpackage)
+		(find-package (string-upcase (string ,gpackage)))
 		(error "No package named ~A found."
 		       ,gpackage))
 	  (specify-other-package ()
