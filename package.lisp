@@ -31,5 +31,6 @@
    #:excs
    #+(or sbcl ccl) ;; needs implementation specific TYPE-SPECIFIER-P or similar
    #:exts
-   #:mac))
+   #:mac
+   #:shadowed-import))
 

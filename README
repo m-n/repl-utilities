@@ -105,6 +105,11 @@ Includes variable, function, type, compiler macro, method
 (EXTS &optional (package *package*)) > macro
  Print the external symbols which are type specifiers.
 
+(SHADOWED-IMPORT symbols &optional package print-when-shadowed-p) > function
+ Import each symbol into PACKAGE, unless a symbol of the same name is present.
+  If print-when-shadowed-p is true, print a message for each not-imported 
+  symbol indicating that it was not imported.
+
 (DEFLEX var val &optional (doc nil docp)) > macro
  Define a top level (global) lexical VAR with initial value VAL,
   which is assigned unconditionally as with DEFPARAMETER. If a DOC

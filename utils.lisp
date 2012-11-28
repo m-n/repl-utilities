@@ -29,14 +29,12 @@ conditionally read forms."
   If print-when-shadowed-p is true, print a message for each not-imported 
   symbol indicating that it was not imported."
   (dolist (sym (if (consp symbols) symbols (list symbols)) t)
-    (if (find-symbol (symbol-name sym) package)
-	(when (and print-when-shadowed-p
-		   (eq (symbol-package (find-symbol (symbol-name sym)))
-		       package)
-		   (not (eq (symbol-package sym)
-			    package)))
-	  (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))
-	(import sym package))))
+    (let ((found (find-symbol (symbol-name sym) package)))
+      (if (not found)
+	  (import sym package)
+	  (when (and print-when-shadowed-p
+		     (not (eq found sym)))
+	    (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))))))
 
 (defun load-system-or-print (system-designator &optional control-string
 			  &rest format-args)
