@@ -113,6 +113,42 @@ Mnemonic for develop.
        (do-external-symbols (,sym ',(ensure-unquoted package))
 	 (doc% ,sym)))))
 
+(defmacro summary (&optional (package *package*))
+  "Print the exported symbols along with the first line of their docstrings."
+  `(summary% ',(ensure-unquoted package)))
+
+(defun summary% (&optional (package-designator *package*))
+  (let ((types (list 
+		(list 'function) (list 'setf) (list 'type) (list 'variable)
+		(list 'compiler-macro) #-clisp (list 'method-combination)))
+	(undocumented-symbols ()))
+    (do-external-symbols (symbol package-designator)
+      (push symbol undocumented-symbols)
+      (dolist (type (mapcar #'car types))
+	(when (documentation symbol type)
+	  (push symbol (cdr (assoc type types)))
+	  (setq undocumented-symbols (remove symbol undocumented-symbols)))))
+    (when undocumented-symbols
+      (format t "~&Undocumented symbols: ~{~A~^, ~}" undocumented-symbols))
+    (map nil (lambda (field)
+	       (destructuring-bind (type . symbols) field
+		 (format t "~&")
+		 (when symbols
+		   (format t "~%~:(~A~)s" type)
+		   (mapc (lambda (symbol)
+			   (format t "~&~A:~20,5t~a~%"
+				   symbol (first-line
+					   (documentation symbol type))))
+			 symbols))))
+	 types)))
+
+(defun first-line (string)
+  (flet ((min-or-nil (&rest args)
+	   (let ((numbers (remove-if-not #'numberp args)))
+	     (if numbers (apply 'min numbers) nil))))
+    (subseq string 0 (min-or-nil (position #\ string)
+				 (position #\Newline string)))))
+
 (defmacro exs (&optional (package *package*))
   "Print the external symbols of package."
   (with-gensyms (ss s)

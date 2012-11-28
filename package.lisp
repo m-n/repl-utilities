@@ -15,6 +15,7 @@
    #:add-advice
    #:remove-advice
    #:readme
+   #:summary
    #-(or clisp ccl) ;; causes a symbol conflict
    #:arglist
    #-ccl ;; ditto
