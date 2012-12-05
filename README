@@ -76,15 +76,8 @@ Mnemonic for develop.
   After importing the package funcall each element of *bring-hooks* with the
   package as its argument.
 
-*advised-functions* > variable
- Hash table of [Key <> Value] of 
-[symbol-of-advised-function <> symbol-function-before-advice]
-
 (PRINT-HASH hash-table) > function
  Print the hash table as: Key, Value~% 
-
-(REMOVE-ADVICE &rest functions) > function
- Clear all advice from given functions, or from all functions if none named.
 
 (MAC expr) > macro
  Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
@@ -123,10 +116,6 @@ Includes variable, function, type, compiler macro, method
 
  The functions are called with the package imported by bring as their only 
  argument.
-
-(ADD-ADVICE symbol advice &optional afterp) > function
- Add an 'advice' function to be called on the arguments before or after
-the symbol-function is called on them.
 
 (TRACE-PACKAGE &optional (package *package*) (inheritedp nil)) > macro
  Trace all of the symbols in *package*. 

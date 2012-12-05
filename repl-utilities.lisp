@@ -290,45 +290,6 @@ Includes variable, function, type, compiler macro, method
 		    type
 		    (documentation symbol type)))))))
 
-;;;; Advice
-;;; TODO: these advice functions are all alpha quality, and I need to review
-;;; the history of functionality typically given with advice functions.
-
-(defvar *advised-functions* (make-hash-table :test #'eq)
-  "Hash table of [Key <> Value] of 
-[symbol-of-advised-function <> symbol-function-before-advice]")
-
-(defun advisedp (symbol)
-  "Returns true if symbol has advice attached."
-  (nth-value 1 (gethash symbol *advised-functions*)))
-
-(defun add-advice (symbol advice &optional afterp)
-  "Add an 'advice' function to be called on the arguments before or after
-the symbol-function is called on them."
-  (unless (advisedp symbol)
-    (setf (gethash symbol  *advised-functions*) (symbol-function symbol)))
-  (let ((old-fn (symbol-function symbol)))
-    (setf (symbol-function symbol)
-       (cond (afterp
-	      (lambda (&rest args)
-		(prog1 (apply old-fn args)
-		  (apply advice args))))
-	     (t
-	      (lambda (&rest args)
-		(apply advice args)
-		(apply old-fn args)))))))
-
-(defun remove-advice (&rest functions)
-  "Clear all advice from given functions, or from all functions if none named."
-  (if functions
-      (loop for fn in functions do
-	    (progn (setf (symbol-function fn) (gethash fn *advised-functions*))
-		   (remhash fn *advised-functions*)))
-      (progn (maphash (lambda (fn-symbol unadvised-fn)
-			(setf (symbol-function fn-symbol) unadvised-fn))
-		      *advised-functions*)
-	     (clrhash *advised-functions*))))
-
 ;;;; Miscellaneous                                                                
 
 (defmacro dbgv ((&optional (where "DEBUG") 
