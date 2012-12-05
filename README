@@ -76,6 +76,8 @@ Mnemonic for develop.
   After importing the package funcall each element of *bring-hooks* with the
   package as its argument.
 
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
+
 *advised-functions* > variable
  Hash table of [Key <> Value] of 
 [symbol-of-advised-function <> symbol-function-before-advice]
@@ -135,10 +137,14 @@ the symbol-function is called on them.
 
 (NIC package-name nick-symbol) > macro
  Add an additional nickname to package.
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
 
-(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > macro
+(DBGV (&optional (where debug)
+       (stream '*standard-output*)) &body forms) > macro
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
 (README &optional (package *package*)) > macro
  Print the documentation on the exported symbols of a package.
+
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
 
