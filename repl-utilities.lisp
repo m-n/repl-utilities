@@ -280,6 +280,9 @@ Includes variable, function, type, compiler macro, method
   `(doc% ',(ensure-unquoted symbol)))
 
 (defun doc% (symbol)
+  (do ()
+      ((not (consp symbol)))
+    (setq symbol (car symbol)))
   (let ((*print-case* :downcase))
     (dolist (type '(compiler-macro function setf type variable ;structure
 		    #-clisp method-combination))
