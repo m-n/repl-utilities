@@ -18,10 +18,13 @@ instead of asdf:load-system and in-package to load and swap to the new
 package. DEV will import the repl-utilities symbols into the new package, if
 they won't cause name conflicts.
 
-Following the lead of cl:in-package, the package introspection and management
-operators have been defined as macros so that they can take unquoted symbols
-as arguments. For convenience they will automatically unquote quoted symbol
-arguments.
+Following the lead of cl:in-package, the package changing, loading,
+and renaming operators (BRING, DEV, and NIC) expand into an eval-when so
+that they can take effect before later forms are read.
+
+The symbol and package introspection operators have been defined as macros
+to allow their arguments to be unquoted symbols. For convenience they
+automatically unquote quoted arguments.
 
 My next favorite operator provided here is README, which prints the docstrings
 for the exported symbols of a package.
