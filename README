@@ -18,10 +18,13 @@ instead of asdf:load-system and in-package to load and swap to the new
 package. DEV will import the repl-utilities symbols into the new package, if
 they won't cause name conflicts.
 
-Following the lead of cl:in-package, the package introspection and management
-operators have been defined as macros so that they can take unquoted symbols
-as arguments. For convenience they will automatically unquote quoted symbol
-arguments.
+Following the lead of cl:in-package, the package changing, loading,
+and renaming operators (BRING, DEV, and NIC) expand into an eval-when so
+that they can take effect before later forms are read.
+
+The symbol and package introspection operators have been defined as macros
+to allow their arguments to be unquoted symbols. For convenience they
+automatically unquote quoted arguments.
 
 My next favorite operator provided here is README, which prints the docstrings
 for the exported symbols of a package.
@@ -76,6 +79,8 @@ Mnemonic for develop.
   After importing the package funcall each element of *bring-hooks* with the
   package as its argument.
 
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
+
 (PRINT-HASH hash-table) > function
  Print the hash table as: Key, Value~% 
 
@@ -124,10 +129,14 @@ Includes variable, function, type, compiler macro, method
 
 (NIC package-name nick-symbol) > macro
  Add an additional nickname to package.
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
 
-(DBGV (&optional (where debug) (stream '*standard-output*)) &body forms) > macro
+(DBGV (&optional (where debug)
+       (stream '*standard-output*)) &body forms) > macro
  Print WHERE, execute FORMS, and print each form and its result to the STREAM.
 
 (README &optional (package *package*)) > macro
  Print the documentation on the exported symbols of a package.
+
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
 

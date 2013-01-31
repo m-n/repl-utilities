@@ -20,24 +20,25 @@ Mnemonic for develop.
 
   After swapping to the package map funcall over *dev-hooks*."
   (with-gensyms (gpackage start)
-    `(prog ((,gpackage ',(ensure-unquoted package)))
-	,start
-	(load-system-or-print ,gpackage
-			      "~&Could not find system, ~
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (prog ((,gpackage ',(ensure-unquoted package)))
+	  ,start
+	  (load-system-or-print ,gpackage
+				"~&Could not find system, ~
                               attempting to ~
                               in-package anyway.~%")
-	(restart-case (setq *package* (or (find-package ,gpackage)
-					  (find-package (string-upcase (string ,gpackage)))
-					  (error "No package named ~A found."
-						 ,gpackage)))
-	  (specify-other-package ()
-	    :report "Specify an alternate package name: "
-	    (setq ,gpackage
-		  (ensure-unquoted (read)))
-	    (go ,start)))
-	(do-external-symbols (sym (find-package 'repl-utilities))
-	  (shadowed-import sym *package* t))
-	(map nil #'funcall *dev-hooks*))))
+	  (restart-case (setq *package* (or (find-package ,gpackage)
+					    (find-package (string-upcase (string ,gpackage)))
+					    (error "No package named ~A found."
+						   ,gpackage)))
+	    (specify-other-package ()
+	      :report "Specify an alternate package name: "
+	      (setq ,gpackage
+		    (ensure-unquoted (read)))
+	      (go ,start)))
+	  (do-external-symbols (sym (find-package 'repl-utilities))
+	    (shadowed-import sym *package* t))
+	  (map nil #'funcall *dev-hooks*)))))
 
 (defvar *bring-hooks* ()
   "List of functions to be funcalled after a package is loaded with BRING.
@@ -52,33 +53,38 @@ Mnemonic for develop.
   the symbols which won't cause a symbol conflict are imported.
 
   After importing the package funcall each element of *bring-hooks* with the
-  package as its argument."
+  package as its argument.
+
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
   (with-gensyms (gpackage start)
-    `(prog ((,gpackage ',(ensure-unquoted package)))
-	,start
-	(load-system-or-print ,gpackage "~&System not found, attempting ~
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (prog ((,gpackage ',(ensure-unquoted package)))
+	  ,start
+	  (load-system-or-print ,gpackage "~&System not found, attempting ~
                                        to import symbols from package ~
                                        ~A if it exists.~%" ,gpackage)
-	(restart-case
-	    (or (find-package ,gpackage)
-		(find-package (string-upcase (string ,gpackage)))
-		(error "No package named ~A found."
-		       ,gpackage))
-	  (specify-other-package ()
-	    :report
-	    "Specify an alternate package name: "
-	    (setq ,gpackage
-		  (ensure-unquoted (read)))
-	    (go ,start)))
-	(do-external-symbols (sym ,gpackage)
-	  (if (not ,shadowing-import)
-	      (shadowed-import sym *package* t)
-	      (shadowing-import sym)))
-	(map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*))))
+	  (restart-case
+	      (or (find-package ,gpackage)
+		  (find-package (string-upcase (string ,gpackage)))
+		  (error "No package named ~A found."
+			 ,gpackage))
+	    (specify-other-package ()
+	      :report
+	      "Specify an alternate package name: "
+	      (setq ,gpackage
+		    (ensure-unquoted (read)))
+	      (go ,start)))
+	  (do-external-symbols (sym ,gpackage)
+	    (if (not ,shadowing-import)
+		(shadowed-import sym *package* t)
+		(shadowing-import sym)))
+	  (map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*)))))
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
-  "Print the documentation on the exported symbols of a package."
+  "Print the documentation on the exported symbols of a package.
+
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
   (with-gensyms (undocumented-symbols sym)
     `(let (,undocumented-symbols)
        (terpri)
@@ -201,18 +207,21 @@ Mnemonic for develop.
 	    do (ignore-errors (eval `(trace  ,,sym)))))))
 
 (defmacro nic (package-name nick-symbol)
-  "Add an additional nickname to package."
+  "Add an additional nickname to package.
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
   (with-gensyms (old-nicknames)
-    `(let ((,old-nicknames (package-nicknames ',(ensure-unquoted package-name))))
-       (if (and (find-package ',(ensure-unquoted nick-symbol))
-		(not (eq (find-package ',(ensure-unquoted nick-symbol))
-			 (find-package ',(ensure-unquoted package-name)))))
-	   (format t "Not adding that nick because it belongs to ~A~%"
-		   (find-package ',(ensure-unquoted nick-symbol)))
-	   (rename-package ',(ensure-unquoted package-name)
-			   ',(ensure-unquoted package-name)
-			   (cons ',(ensure-unquoted nick-symbol)
-				 ,old-nicknames))))))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (let ((,old-nicknames (package-nicknames
+			      ',(ensure-unquoted package-name))))
+	 (if (and (find-package ',(ensure-unquoted nick-symbol))
+		  (not (eq (find-package ',(ensure-unquoted nick-symbol))
+			   (find-package ',(ensure-unquoted package-name)))))
+	     (format t "Not adding that nick because it belongs to ~A~%"
+		     (find-package ',(ensure-unquoted nick-symbol)))
+	     (rename-package ',(ensure-unquoted package-name)
+			     ',(ensure-unquoted package-name)
+			     (cons ',(ensure-unquoted nick-symbol)
+				   ,old-nicknames)))))))
 
 ;;;; Symbol Utilities
 
@@ -271,6 +280,9 @@ Includes variable, function, type, compiler macro, method
   `(doc% ',(ensure-unquoted symbol)))
 
 (defun doc% (symbol)
+  (do ()
+      ((not (consp symbol)))
+    (setq symbol (car symbol)))
   (let ((*print-case* :downcase))
     (dolist (type '(compiler-macro function setf type variable ;structure
 		    #-clisp method-combination))
