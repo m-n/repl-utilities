@@ -196,15 +196,18 @@ Mnemonic for develop.
   "Trace all of the symbols in *package*. 
 
  This won't attempt to trace any symbols in :cl"
-  (with-gensyms (pac sym cl)
-    `(let ((,pac (find-package ',(ensure-unquoted package)))
-	   (,cl (find-package :cl)))
-      (loop for ,sym being the symbols in ,pac when
-	    (unless (eq ,cl (symbol-package ,sym))
-	      (if ,inheritedp
-		t
-		(eq ,pac (symbol-package ,sym))))	    
-	    do (ignore-errors (eval `(trace  ,,sym)))))))
+  `(trace-package% ',(ensure-unquoted package) ,inheritedp))
+
+(defun trace-package% (&optional (package *package*) (inheritedp nil))
+  (let ((pac (find-package package)))
+    (loop for sym being the symbols in pac
+	  when (unless (or (eq (symbol-package sym)
+			       (load-time-value (find-package '#:cl)))
+			   (not (fboundp sym)))
+		 (if inheritedp
+		     t
+		     (eq pac (symbol-package sym))))
+	    do  (ignore-errors (eval `(trace  ,sym))))))
 
 (defmacro nic (package-name nick-symbol)
   "Add an additional nickname to package.
