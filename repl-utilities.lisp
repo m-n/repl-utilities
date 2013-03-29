@@ -18,7 +18,9 @@
    conflicts into the newly swapped to pacage.
 Mnemonic for develop.
 
-  After swapping to the package map funcall over *dev-hooks*."
+  After swapping to the package map funcall over *dev-hooks*.
+
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
   (with-gensyms (gpackage start)
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (prog ((,gpackage ',(ensure-unquoted package)))
@@ -82,9 +84,7 @@ Mnemonic for develop.
 
 (defmacro readme (&optional (package *package*))
   ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
-  "Print the documentation on the exported symbols of a package.
-
-  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
+  "Print the documentation on the exported symbols of a package."
   (with-gensyms (undocumented-symbols sym)
     `(let (,undocumented-symbols)
        (terpri)

@@ -67,6 +67,8 @@ Mnemonic for develop.
 
   After swapping to the package map funcall over *dev-hooks*.
 
+  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
+
 (SUMMARY &optional (package *package*)) > macro
  Print the exported symbols along with the first line of their docstrings.
 
@@ -137,6 +139,4 @@ Includes variable, function, type, compiler macro, method
 
 (README &optional (package *package*)) > macro
  Print the documentation on the exported symbols of a package.
-
-  Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute
 
