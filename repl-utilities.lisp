@@ -199,15 +199,27 @@ Mnemonic for develop.
   `(trace-package% ',(ensure-unquoted package) ,inheritedp))
 
 (defun trace-package% (&optional (package *package*) (inheritedp nil))
-  (let ((pac (find-package package)))
-    (loop for sym being the symbols in pac
-	  when (unless (or (eq (symbol-package sym)
-			       (load-time-value (find-package '#:cl)))
-			   (not (fboundp sym)))
-		 (if inheritedp
-		     t
-		     (eq pac (symbol-package sym))))
-	    do  (ignore-errors (eval `(trace  ,sym))))))
+  (#+clisp flet
+   #+clisp ((symbol-prefix-p (prefix symbol)
+			     (let ((name (symbol-name symbol)))
+			       (when (<= (length prefix) (length name))
+				 (every #'char-equal prefix name)))))
+   ;; We use the reader instead of an ignore declaration to keep sbcl's
+   ;; compiler quiet.
+   #-clisp progn
+   (let ((pac (find-package package)))
+     (loop for sym being the symbols in pac
+	   when (unless (or (eq (symbol-package sym)
+				(load-time-value (find-package '#:cl)))
+			    (not (fboundp sym))
+			    ;; clisp's tracer creates symbols
+			    ;; named TRACED-{function}. We don't want
+			    ;; to trace these trace functions.
+			    #+clisp (symbol-prefix-p "TRACED-" sym))
+		  (if inheritedp
+		      t
+		      (eq pac (symbol-package sym))))
+	     do  (ignore-errors (eval `(trace  ,sym)))))))
 
 (defmacro nic (package-name nick-symbol)
   "Add an additional nickname to package.
