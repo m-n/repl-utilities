@@ -350,19 +350,25 @@ Includes variable, function, type, compiler macro, method
   asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op."
   (let (printed-systems)
     (labels ((rec (sys)
-	       (setq sys (asdf:find-system sys))
+               (setq sys (asdf:find-system sys))
 	       (unless (member sys printed-systems)
 		 (push sys printed-systems)
 		 (format t "~&~S" (asdf:component-pathname sys))
 		 (when print-system-names-p
 		   (format t ", ~A~&"  (asdf:component-name sys)))
-		 (map nil
-		      #'rec
-		      (cdr (find operation
-				 (asdf:component-depends-on operation sys)
-				 :key #'car))))))
+                 (map nil (lambda (s) (map nil #'rec (cdr s)))
+                      (mapcar (lambda (ss)
+                                (remove-if-not (lambda (s) (typep s 'asdf:system))
+                                               ss))
+                              (remove operation
+                                      (asdf:component-depends-on operation sys)
+                                      :key #'car
+                                      :test-not
+                                      (lambda (o c)
+                                        (or (eq c o)
+                                            (typep c o)))))))))
       (rec system-name))
-    ;(nreverse printed-systems)
+    ;; (nreverse printed-systems)
     ))
 
 (defmacro mac (expr)
