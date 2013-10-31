@@ -335,6 +335,31 @@ Includes variable, function, type, compiler macro, method
                          (format ,stream "~&~s = ~{~s~^, ~}~%" ',form ,result))) 
          (values-list ,result)))))
 
+#+sbcl
+(defmacro rig (&body body)
+  "Execute body with profiling and timing.
+Arrange for profiling information to print before IO or timing data."
+  (with-gensyms (ans standard-str s trace-str r)
+    `(let ((,standard-str (make-array 1000 :element-type 'character
+				      :adjustable t
+				      :fill-pointer 0))
+	   (,trace-str (make-array 1000 :element-type 'character
+				   :adjustable t
+				   :fill-pointer 0))
+	   ,ans)
+       (sb-sprof:reset)
+       (sb-sprof:start-profiling)
+       (with-output-to-string (,s ,standard-str)
+	 (with-output-to-string (,r ,trace-str)
+	   (let ((*standard-output* ,s)
+		 ;; necessary to catch time's output
+		 (*trace-output* ,r))
+	     (setq ,ans (multiple-value-list (time (progn ,@body)))))))
+       (sb-sprof:report :type :flat :max 30)
+       (princ ,trace-str)
+       (princ ,standard-str)
+       (apply #'values ,ans))))
+
 (defun print-hash (hash-table)
   "Print the hash table as: Key, Value~% "
   (loop for k being the hash-keys in hash-table

@@ -52,7 +52,8 @@ conditionally read forms."
 ;;;; Portability
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  #+sbcl (require 'sb-introspect))
+  #+sbcl (require 'sb-introspect)
+  #+sbcl (require  'sb-sprof))
  
 (defun arglist (fname)
   "Return the arglist for the given function name.
