@@ -21,6 +21,8 @@
    #+asdf
    #:dependency-locations
    #:dbgv
+   #+sbcl
+   #:rig
    #:exs
    #:exfns
    #:excs

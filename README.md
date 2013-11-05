@@ -73,6 +73,7 @@ Miscellaneous Utilities
     PRINT-HASH:         Print the hash table as: Key, Value~% 
     MAC:                Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
     DBGV:               Print WHERE, execute FORMS, and print each form and its result to the STREAM.
+    RIG:                Execute body with profiling and timing.
 
 Pulling It Together
 -------------------
