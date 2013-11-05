@@ -37,17 +37,20 @@ conditionally read forms."
 	    (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))))))
 
 (defun load-system-or-print (system-designator &optional control-string
-			  &rest format-args)
-  (handler-case 	      
+                                               &rest format-args)
+  (flet ((not-found-name (n)
+           (first-form #+quicklisp (ql:system-not-found-name n)
+                       #+asdf      (asdf/find-system:missing-requires n))))
+    (handler-bind (((or #+quicklisp quicklisp-client::system-not-found
+                        #+asdf      asdf:missing-component)
+                    (lambda (c)
+                      (when (string-equal (not-found-name c) system-designator)
+                        (when control-string
+                          (apply #'format t control-string format-args))
+                        (abort)))))
       (first-form #+quicklisp (ql:quickload
-			       system-designator)
-		  #+asdf (asdf:load-system system-designator))
-    ((or #+asdf asdf:missing-component
-	 #+quicklisp quicklisp-client::system-not-found )
-      (c)
-      (declare (ignorable c))
-      (when control-string
-	(apply #'format t control-string format-args)))))
+                               system-designator)
+                  #+asdf (asdf:load-system system-designator)))))
 
 ;;;; Portability
 

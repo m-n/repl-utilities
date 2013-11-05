@@ -21,26 +21,24 @@ Mnemonic for develop.
   After swapping to the package map funcall over *dev-hooks*.
 
   Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
-  (with-gensyms (gpackage start)
-    `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (prog ((,gpackage ',(ensure-unquoted package)))
-	  ,start
-	  (load-system-or-print ,gpackage
-				"~&Could not find system, ~
-                              attempting to ~
-                              in-package anyway.~%")
-	  (restart-case (setq *package* (or (find-package ,gpackage)
-					    (find-package (string-upcase (string ,gpackage)))
-					    (error "No package named ~A found."
-						   ,gpackage)))
-	    (specify-other-package ()
-	      :report "Specify an alternate package name: "
-	      (setq ,gpackage
-		    (ensure-unquoted (read)))
-	      (go ,start)))
-	  (do-external-symbols (sym (find-package 'repl-utilities))
-	    (shadowed-import sym *package* t))
-	  (map nil #'funcall *dev-hooks*)))))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (dev% ',(ensure-unquoted package))))
+
+(defun dev% (package)
+  (load-system-or-print
+   package "~&Could not find system, attempting to in-package anyway.~%")
+  (restart-case (progn (setq *package* (or (find-package package)
+                                           (find-package (string-upcase (string package)))
+                                           (error "No package named ~A found."
+                                                  package)))
+                       (do-external-symbols (sym (find-package 'repl-utilities))
+                         (shadowed-import sym *package* t))
+                       (map nil #'funcall *dev-hooks*))
+    (specify-other-package ()
+      :report "Specify an alternate package name: "
+      (setq package
+            (ensure-unquoted (read)))
+      (dev% package))))
 
 (defvar *bring-hooks* ()
   "List of functions to be funcalled after a package is loaded with BRING.
