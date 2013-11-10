@@ -28,7 +28,8 @@ Mnemonic for develop.
   (load-system-or-print
    package "~&Could not find system, attempting to in-package anyway.~%")
   (restart-case (progn (setq *package* (or (find-package package)
-                                           (find-package (string-upcase (string package)))
+                                           (find-package (string-upcase
+                                                          (string package)))
                                            (error "No package named ~A found."
                                                   package)))
                        (do-external-symbols (sym (find-package 'repl-utilities))
@@ -36,9 +37,7 @@ Mnemonic for develop.
                        (map nil #'funcall *dev-hooks*))
     (specify-other-package ()
       :report "Specify an alternate package name: "
-      (setq package
-            (ensure-unquoted (read)))
-      (dev% package))))
+      (dev% (ensure-unquoted (read))))))
 
 (defvar *bring-hooks* ()
   "List of functions to be funcalled after a package is loaded with BRING.
@@ -153,42 +152,42 @@ Mnemonic for develop.
     (subseq string 0 (min-or-nil (position #\ string)
 				 (position #\Newline string)))))
 
-(defmacro exs (&optional (package *package*))
+(defmacro define-external-symbol-printers (&body name-condition-doc)
+  (flet ((symbol-printer-definition (name condition doc)
+           `(defmacro ,name (&optional (package *package*))
+              ,doc
+              `(print-symbols ',(ensure-unquoted package)
+                             ;; intentionally captures SYMBOL
+                             (lambda (symbol) (declare (ignorable symbol))
+                                ,',condition)))))
+    `(progn ,@(loop for (name condition doc) on name-condition-doc by #'cdddr
+                    collect (symbol-printer-definition name condition doc)))))
+
+(define-external-symbol-printers
+
+  exs t
   "Print the external symbols of package."
-  (with-gensyms (ss s)
-    `(let (,ss)
-       (do-external-symbols (,s ',(ensure-unquoted package))
-	 (push ,s ,ss))
-       (format t "~{~A, ~}" (sort ,ss #'string<)))))
 
-(defmacro exfns (&optional (package *package*))
+  exfns (fboundp symbol)
   "Print the external fboundp symbols of a package."
-  (with-gensyms (fns fn)
-    `(let (,fns)
-       (do-external-symbols (,fn ',(ensure-unquoted package))
-	 (when (fboundp ,fn)
-	   (push ,fn ,fns)))
-       (format t "~{~A, ~}" (sort ,fns #'string<)))))
 
-(defmacro excs (&optional (package *package*))
+  exvs (boundp symbol)
+  "Print the external boundp symbols of a package."
+
+  excs  (find-class symbol nil)
   "Print the external symbols for which find-class is truthy."
-  (with-gensyms (classes class)
-    `(let (,classes)
-      (do-external-symbols (,class ',(ensure-unquoted package))
-	(when (find-class ,class nil)
-	  (push ,class ,classes)))
-      (format t "~{~A, ~}" (sort ,classes #'string<)))))
 
-#+(or sbcl ccl) 
-(defmacro exts (&optional (package *package*))
-  "Print the external symbols which are type specifiers."
-  (with-gensyms (types type)
-    `(let (,types)
-       (do-external-symbols (,type ',(ensure-unquoted package))
-	(when (first-form #+sbcl(sb-ext:valid-type-specifier-p ,type)
-			  #+ccl(ccl:type-specifier-p ,type))
-	  (push ,type ,types)))
-      (format t "~{~A, ~}" (sort ,types #'string<)))))
+  #+(or sbcl ccl) exts
+  #+(or sbcl ccl) (first-form #+sbcl(sb-ext:valid-type-specifier-p symbol)
+                              #+ccl(ccl:type-specifier-p symbol))
+  #+(or sbcl ccl) "Print the external symbols which are type specifiers.")
+
+(defun print-symbols (package-designator test)
+  (let (symbols)
+    (do-external-symbols (symbol package-designator)
+      (when (funcall test symbol)
+        (push symbol symbols)))
+    (format t "~{~A, ~}" (sort symbols #'string<))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. 
