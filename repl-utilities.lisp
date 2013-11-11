@@ -80,50 +80,36 @@ Mnemonic for develop.
 	  (map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*)))))
 
 (defmacro readme (&optional (package *package*))
-  ;; TODO: optional ansi coloring, sort the symbols in some sensical way, paging?
   "Print the documentation on the exported symbols of a package."
-  (with-gensyms (undocumented-symbols sym)
-    `(let (,undocumented-symbols)
-       (terpri)
-       (when (documentation (find-package ',(ensure-unquoted package)) t)
-	 (format t "~&~A > Package~% ~<~A~%~%~>"
-		 ',(ensure-unquoted package)
-		 (documentation (find-package ',(ensure-unquoted package)) t)))
-       #+asdf
-       (when (and (ignore-errors (asdf:find-system
-				  (string-downcase (package-name
-						    ',(ensure-unquoted package)))))
-		  (ignore-errors
-		   (asdf:system-description
-		    (asdf:find-system
-		     (string-downcase (package-name
-				       ',(ensure-unquoted package)))))))
-	 (format t "~&~A > ASDF System~% ~<~A~%~%~>"
-		 (package-name ',(ensure-unquoted package))
-		 (asdf:system-description
-		    (asdf:find-system
-		     (string-downcase (package-name
-				       ',(ensure-unquoted package)))))))
-       (do-external-symbols (,sym ',(ensure-unquoted package))
-	 (unless (some (lambda (doctype) (documentation ,sym doctype))
-		       '(compiler-macro function #-clisp method-combination
-			 setf structure type variable))
-	   (push ,sym ,undocumented-symbols)))
-       (when ,undocumented-symbols
-	 (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
+  `(%readme ',(ensure-unquoted package)))
+
+(defun %readme (&optional (package *package*))
+  (let (undocumented-symbols
+        documented-symbols)
+    (terpri)
+    (when (documentation (find-package package) t)
+      (format t "~&~A > Package~% ~<~A~%~%~>"
+              package
+              (documentation (find-package package) t)))
+    #+asdf (print-asdf-description package)
+    (do-external-symbols (sym package)
+      (if (some (lambda (doctype) (documentation sym doctype))
+                *documentation-types*)
+          (push sym documented-symbols)
+          (push sym undocumented-symbols)))
+    (when undocumented-symbols
+      (format t "~&Undocumented exported symbols:~%~% ~{~A ~}~%~%~
                    Documented exported symbols:~%~%"
-		 ,undocumented-symbols))
-       (do-external-symbols (,sym ',(ensure-unquoted package))
-	 (doc% ,sym)))))
+              (string-sort undocumented-symbols)))
+    (dolist (sym (string-sort documented-symbols))
+      (doc% sym))))
 
 (defmacro summary (&optional (package *package*))
   "Print the exported symbols along with the first line of their docstrings."
   `(summary% ',(ensure-unquoted package)))
 
 (defun summary% (&optional (package-designator *package*))
-  (let ((types (list 
-		(list 'function) (list 'setf) (list 'type) (list 'variable)
-		(list 'compiler-macro) #-clisp (list 'method-combination)))
+  (let ((types (mapcar #'list *documentation-types*))
 	(undocumented-symbols ()))
     (do-external-symbols (symbol package-designator)
       (push symbol undocumented-symbols)
@@ -132,7 +118,8 @@ Mnemonic for develop.
 	  (push symbol (cdr (assoc type types)))
 	  (setq undocumented-symbols (remove symbol undocumented-symbols)))))
     (when undocumented-symbols
-      (format t "~&Undocumented symbols: ~{~A~^, ~}" undocumented-symbols))
+      (format t "~&Undocumented symbols: ~{~A~^, ~}" (string-sort
+                                                      undocumented-symbols)))
     (map nil (lambda (field)
 	       (destructuring-bind (type . symbols) field
 		 (format t "~&")
@@ -142,15 +129,8 @@ Mnemonic for develop.
 			   (format t "~&~A:~20,5t~a~%"
 				   symbol (first-line
 					   (documentation symbol type))))
-			 symbols))))
+			 (string-sort symbols)))))
 	 types)))
-
-(defun first-line (string)
-  (flet ((min-or-nil (&rest args)
-	   (let ((numbers (remove-if-not #'numberp args)))
-	     (if numbers (apply 'min numbers) nil))))
-    (subseq string 0 (min-or-nil (position #\ string)
-				 (position #\Newline string)))))
 
 (defmacro define-external-symbol-printers (&body name-condition-doc)
   (flet ((symbol-printer-definition (name condition doc)
@@ -187,7 +167,7 @@ Mnemonic for develop.
     (do-external-symbols (symbol package-designator)
       (when (funcall test symbol)
         (push symbol symbols)))
-    (format t "~{~A, ~}" (sort symbols #'string<))))
+    (format t "~{~A, ~}" (string-sort symbols))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. 
@@ -296,8 +276,7 @@ Includes variable, function, type, compiler macro, method
       ((not (consp symbol)))
     (setq symbol (car symbol)))
   (let ((*print-case* :downcase))
-    (dolist (type '(compiler-macro function setf type variable ;structure
-		    #-clisp method-combination))
+    (dolist (type *documentation-types*)
       (when (documentation symbol type)
 	(if (member type '(compiler-macro function setf
 			   #-clisp method-combination))

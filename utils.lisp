@@ -23,6 +23,16 @@ quoted or unquoted symbol."
 conditionally read forms."
   (first forms))
 
+(defun string-sort (list)
+  (sort (copy-list list) #'string<))
+
+(defun first-line (string)
+  (flet ((min-or-nil (&rest args)
+	   (let ((numbers (remove-if-not #'numberp args)))
+	     (if numbers (apply 'min numbers) nil))))
+    (subseq string 0 (min-or-nil (position #\ string)
+				 (position #\Newline string)))))
+
 (defun shadowed-import (symbols
 			&optional (package *package*) (print-when-shadowed-p t))
   "Import each symbol into PACKAGE, unless a symbol of the same name is present.
@@ -51,6 +61,22 @@ conditionally read forms."
       (first-form #+quicklisp (ql:quickload
                                system-designator)
                   #+asdf (asdf:load-system system-designator)))))
+
+(defparameter *documentation-types*
+  '(function setf type variable compiler-macro ;structure
+    #-clisp method-combination)
+  "Types that might work with (documentation obj type)")
+
+#+asdf
+(defun print-asdf-description (package)
+  (let ((description (ignore-errors
+                       (asdf:system-description
+                        (asdf:find-system
+                         (string-downcase (package-name
+                                           package)))))))
+    (when description
+      (format t "~&~A > ASDF System~% ~<~A~%~%~>"
+              (package-name package) description))))
 
 ;;;; Portability
 
