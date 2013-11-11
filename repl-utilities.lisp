@@ -341,7 +341,7 @@ Arrange for profiling information to print before IO or timing data."
   (loop for k being the hash-keys in hash-table
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
-#+asdf
+#+asdf3
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
 					   (operation 'asdf:load-op))

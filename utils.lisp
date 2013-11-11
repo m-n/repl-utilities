@@ -48,19 +48,25 @@ conditionally read forms."
 
 (defun load-system-or-print (system-designator &optional control-string
                                                &rest format-args)
-  (flet ((not-found-name (n)
-           (first-form #+quicklisp (ql:system-not-found-name n)
-                       #+asdf      (asdf/find-system:missing-requires n))))
-    (handler-bind (((or #+quicklisp quicklisp-client::system-not-found
-                        #+asdf      asdf:missing-component)
-                    (lambda (c)
-                      (when (string-equal (not-found-name c) system-designator)
+  (tagbody
+     (handler-bind (#+quicklisp
+                    (quicklisp-client::system-not-found
+                     (lambda (c)
+                       (when (string-equal (ql:system-not-found-name c)
+                                           system-designator)
+                         (when control-string
+                           (apply #'format t control-string format-args))
+                         (go end))))
+                    #+asdf
+                    ((and asdf:missing-component (not asdf:missing-dependency))
+                     (lambda (c) (declare (ignore c))
                         (when control-string
                           (apply #'format t control-string format-args))
-                        (abort)))))
-      (first-form #+quicklisp (ql:quickload
-                               system-designator)
-                  #+asdf (asdf:load-system system-designator)))))
+                        (go end))))
+       (first-form #+quicklisp (ql:quickload
+                                system-designator)
+                   #+asdf (asdf:load-system system-designator)))
+   end))
 
 (defparameter *documentation-types*
   '(function setf type variable compiler-macro ;structure
