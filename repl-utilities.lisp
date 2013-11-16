@@ -341,7 +341,7 @@ Arrange for profiling information to print before IO or timing data."
   (loop for k being the hash-keys in hash-table
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
-#+asdf3
+#+asdf
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
 					   (operation 'asdf:load-op))
@@ -357,10 +357,19 @@ Arrange for profiling information to print before IO or timing data."
 		 (format t "~&~S" (asdf:component-pathname sys))
 		 (when print-system-names-p
 		   (format t ", ~A~&"  (asdf:component-name sys)))
-                 (map nil (lambda (s) (map nil #'rec (cdr s)))
+                 (map nil (lambda (s) (map nil #'rec s))
                       (mapcar (lambda (ss)
-                                (remove-if-not (lambda (s) (typep s 'asdf:system))
-                                               ss))
+                                (remove-if-not
+                                 (lambda (s)
+                                   ;; asfd3 includes load-op of #<asdf:cl-sourc-file>s
+                                   ;; which we don't want to report
+                                   (or (typep s 'asdf:system)
+                                       ;; but s is specified to be a designator,
+                                       ;; not necessarily an instance of asdf:system,
+                                       ;; and asdf2 at least takes advantage of that
+                                       (symbolp s)
+                                       (stringp s)))
+                                 (cdr ss)))
                               (remove operation
                                       (asdf:component-depends-on operation sys)
                                       :key #'car
