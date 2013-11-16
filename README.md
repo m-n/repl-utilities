@@ -75,6 +75,7 @@ Miscellaneous Utilities
     MAC:                Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
     DBGV:               Print WHERE, execute FORMS, and print each form and its result to the STREAM.
     RIG:                Execute body with profiling and timing.
+    REPEATABLY:         Use the same random state seed for every execution.
 
 Pulling It Together
 -------------------

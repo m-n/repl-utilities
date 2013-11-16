@@ -21,6 +21,7 @@
    #+asdf
    #:dependency-locations
    #:dbgv
+   #:repeatably
    #+sbcl
    #:rig
    #:exs

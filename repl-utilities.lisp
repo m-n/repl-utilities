@@ -336,6 +336,13 @@ Arrange for profiling information to print before IO or timing data."
        (princ ,standard-str)
        (apply #'values ,ans))))
 
+(defmacro repeatably (&body body)
+  "Use the same random state seed for every execution.
+Random state seed is changed when defmacro repeatably is reloaded."
+  `(let ((*random-state* (make-random-state
+                          (load-time-value (make-random-state)))))
+     ,@body))
+
 (defun print-hash (hash-table)
   "Print the hash table as: Key, Value~% "
   (loop for k being the hash-keys in hash-table
