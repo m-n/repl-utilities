@@ -85,3 +85,51 @@ Pulling It Together
     BRING:              Load package and import its exported symbols.
     *BRING-HOOKS*:      List of functions to be funcalled after a package is loaded with BRING.
     SHADOWED-IMPORT:    Import each symbol into PACKAGE, unless a symbol of the same name is present.
+
+Examples of \*dev-hooks\*
+=======================
+
+One of my primary motivations for introducting \*dev-hooks\* was to
+automate importing symbols that I always want available at the
+repl. For example, if you want to keep my much-todo library at hand,
+you can (from a context where it is already loaded) do the following:
+
+    (defun todo-imports ()
+      (repl-utilities:shadowed-import
+        (loop for s being the external-symbols of :much-todo
+              collect s)))
+
+    (pushnew 'todo-imports *dev-hooks*)
+
+The use of 'todo-imports instead of #'todo-imports is significant
+for appropriate behavior when todo-imports is redefined.
+
+This illustrates a reason I prefer importing to binding personal
+functions to keywords even though importing leaves the possibility of
+symbol conflicts: it encourages me to write code in a form that is
+suitable for sharing as an asdf system.
+
+One hook I am quite fond of tries to sync the
+\*default-pathname-defaults\* and emacs default-directory with the
+package I am switching into.
+
+    (defun d-p-d-package (&optional (package *package*))
+      "If the package's name is a homonym for an asdf system, change the *d-p-d* to its
+       location on disk and, if (setq slime-enable-evaluate-in-emacs t)
+       in emacs, set the slime repl's pathname default as well."
+       ;; slime-enable-evaluate-in-emacs warns that it can be a security risk
+      (let ((pathloc (ignore-errors (asdf:component-pathname
+                                     (asdf:find-system
+                                      (intern (package-name package)
+                                              :keyword))))))
+        (cond (pathloc
+               (setq *default-pathname-defaults* pathloc)
+               (swank:eval-in-emacs
+                `(with-current-buffer (slime-output-buffer)
+                   (setq default-directory
+                         ,(namestring *default-pathname-defaults*)))
+                :nowait))
+              (t (format t "~& Couldn't find a source location for ~A~%"
+                           package)))))
+
+    (pushnew 'd-p-d-package *dev-hooks*)
