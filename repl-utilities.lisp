@@ -1,5 +1,10 @@
 ;;;; repl-utilities.lisp
 
+;;; Main implementation of the repl utilities.
+
+;;; Convention: FOO% function does the implementation work of the FOO
+;;; macro.
+
 (in-package #:repl-utilities)
 
 ;;;; Package Utilities
@@ -45,45 +50,43 @@ Mnemonic for develop.
  The functions are called with the package imported by bring as their only 
  argument.")
 
-(defmacro bring (package &optional (shadowing-import nil))
+(defmacro bring (package &optional (shadowing-import-p nil))
   "Attempt to ql:quickload or asdf:load-system a system with the same name as 
   package. Regardless of whether the load was successful import the package's
   exported symbols into the current package. If shadowing-import is nil, only
   the symbols which won't cause a symbol conflict are imported.
 
   After importing the package funcall each element of *bring-hooks* with the
-  package as its argument.
+  designated package as its argument.
 
   Expands to an EVAL-WHEN :compile-toplevel :load-toplevel :execute"
-  (with-gensyms (gpackage start)
-    `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (prog ((,gpackage ',(ensure-unquoted package)))
-	  ,start
-	  (load-system-or-print ,gpackage "~&System not found, attempting ~
-                                       to import symbols from package ~
-                                       ~A if it exists.~%" ,gpackage)
-	  (restart-case
-	      (or (find-package ,gpackage)
-		  (find-package (string-upcase (string ,gpackage)))
-		  (error "No package named ~A found."
-			 ,gpackage))
-	    (specify-other-package ()
-	      :report
-	      "Specify an alternate package name: "
-	      (setq ,gpackage
-		    (ensure-unquoted (read)))
-	      (go ,start)))
-	  (do-external-symbols (sym ,gpackage)
-	    (if (not ,shadowing-import)
-		(shadowed-import sym *package* t)
-		(shadowing-import sym)))
-	  (map nil (lambda (fn) (funcall fn ,gpackage)) *bring-hooks*)))))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (bring% ',(ensure-unquoted package) ,shadowing-import-p)))
+
+(defun bring% (package-designator shadowing-import-p)
+  (load-system-or-print
+   package-designator
+   "~&System not found, attempting to import symbols from ~
+   package ~A if it exists.~%" package-designator)
+  (restart-case
+      (progn (setq package (or (find-package package)
+                               (find-package (string-upcase (string package)))
+                               (error "No package named ~A found." package)))
+             (do-external-symbols (sym package)
+               (if shadowing-import-p
+                   (shadowing-import sym)
+                   (shadowed-import sym *package* t)))
+             (map nil (lambda (fn) (funcall fn package)) *bring-hooks*)
+             package)
+    (specify-other-package ()
+      :report "Specify an alternate package name: "
+      (bring% (ensure-unquoted (read)) shadowing-import-p))))
 
 (defmacro readme (&optional (package *package*))
   "Print the documentation on the exported symbols of a package."
-  `(%readme ',(ensure-unquoted package)))
+  `(readme% ',(ensure-unquoted package)))
 
-(defun %readme (&optional (package *package*))
+(defun readme% (&optional (package *package*))
   (let (undocumented-symbols
         documented-symbols)
     (terpri)

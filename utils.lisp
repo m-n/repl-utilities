@@ -48,25 +48,21 @@ conditionally read forms."
 
 (defun load-system-or-print (system-designator &optional control-string
                                                &rest format-args)
-  (tagbody
-     (handler-bind (#+quicklisp
-                    (quicklisp-client::system-not-found
-                     (lambda (c)
-                       (when (string-equal (ql:system-not-found-name c)
-                                           system-designator)
-                         (when control-string
-                           (apply #'format t control-string format-args))
-                         (go end))))
-                    #+asdf
-                    ((and asdf:missing-component (not asdf:missing-dependency))
-                     (lambda (c) (declare (ignore c))
-                        (when control-string
-                          (apply #'format t control-string format-args))
-                        (go end))))
-       (first-form #+quicklisp (ql:quickload
-                                system-designator)
-                   #+asdf (asdf:load-system system-designator)))
-   end))
+  (handler-case (first-form #+quicklisp
+                            (ql:quickload system-designator)
+                            #+asdf
+                            (asdf:load-system system-designator))
+    #+quicklisp
+    (quicklisp-client::system-not-found (c)
+      (when (string-equal (ql:system-not-found-name c)
+                          system-designator)
+        (when control-string
+          (apply #'format t control-string format-args))))
+    #+asdf
+    ((and asdf:missing-component (not asdf:missing-dependency)) (c)
+      (declare (ignore c))
+      (when control-string
+        (apply #'format t control-string format-args)))))
 
 (defparameter *documentation-types*
   '(function setf type variable compiler-macro ;structure
@@ -88,7 +84,7 @@ conditionally read forms."
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   #+sbcl (require 'sb-introspect)
-  #+sbcl (require  'sb-sprof))
+  #+sbcl (require 'sb-sprof))
  
 (defun arglist (fname)
   "Return the arglist for the given function name.
