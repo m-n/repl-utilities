@@ -69,15 +69,17 @@ Mnemonic for develop.
    "~&System not found, attempting to import symbols from ~
    package ~A if it exists.~%" package-designator)
   (restart-case
-      (progn (setq package (or (find-package package)
-                               (find-package (string-upcase (string package)))
-                               (error "No package named ~A found." package)))
-             (do-external-symbols (sym package)
+      (progn (setq package-designator (or (find-package package-designator)
+                               (find-package (string-upcase
+                                              (string package-designator)))
+                               (error "No package named ~A found."
+                                      package-designator)))
+             (do-external-symbols (sym package-designator)
                (if shadowing-import-p
                    (shadowing-import sym)
                    (shadowed-import sym *package* t)))
-             (map nil (lambda (fn) (funcall fn package)) *bring-hooks*)
-             package)
+             (map nil (lambda (fn) (funcall fn package-designator)) *bring-hooks*)
+             package-designator)
     (specify-other-package ()
       :report "Specify an alternate package name: "
       (bring% (ensure-unquoted (read)) shadowing-import-p))))
