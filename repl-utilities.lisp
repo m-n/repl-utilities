@@ -7,6 +7,9 @@
 
 (in-package #:repl-utilities)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setq *readtable* *repl-utilities-rt*))
+
 ;;;; Package Utilities
 
 (defvar *dev-hooks* ()
@@ -96,7 +99,7 @@ Mnemonic for develop.
       (format t "~&~A > Package~% ~<~A~%~%~>"
               package
               (documentation (find-package package) t)))
-    #+asdf (print-asdf-description package)
+    (print-asdf-description package)
     (do-external-symbols (sym package)
       (if (some (lambda (doctype) (documentation sym doctype))
                 *documentation-types*)
@@ -353,29 +356,31 @@ Random state seed is changed when defmacro repeatably is reloaded."
   (loop for k being the hash-keys in hash-table
 	do (format t "~A, ~A~%" k (gethash k hash-table))))
 
-#+asdf
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
-					   (operation 'asdf:load-op))
+					   (operation [asdf load-op]))
   "Print the pathname of the system and of the systems needed to operation it.
 
   Operation should be a symbol naming an operation recognized by
   asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op."
+  (unless (find-package "ASDF") (return-from dependency-locations
+                                  (format t "I don't know how to find ~
+                                            dependencies without asdf.")))
   (let (printed-systems)
     (labels ((rec (sys)
-               (setq sys (asdf:find-system sys))
+               (setq sys (funcall [asdf find-system] sys))
 	       (unless (member sys printed-systems)
 		 (push sys printed-systems)
-		 (format t "~&~S" (asdf:component-pathname sys))
+		 (format t "~&~S" (funcall [asdf component-pathname] sys))
 		 (when print-system-names-p
-		   (format t ", ~A~&"  (asdf:component-name sys)))
+		   (format t ", ~A~&"  (funcall [asdf component-name] sys)))
                  (map nil (lambda (s) (map nil #'rec s))
                       (mapcar (lambda (ss)
                                 (remove-if-not
                                  (lambda (s)
                                    ;; asfd3 includes load-op of #<asdf:cl-sourc-file>s
                                    ;; which we don't want to report
-                                   (or (typep s 'asdf:system)
+                                   (or (typep s [asdf system])
                                        ;; but s is specified to be a designator,
                                        ;; not necessarily an instance of asdf:system,
                                        ;; and asdf2 at least takes advantage of that
@@ -383,15 +388,13 @@ Random state seed is changed when defmacro repeatably is reloaded."
                                        (stringp s)))
                                  (cdr ss)))
                               (remove operation
-                                      (asdf:component-depends-on operation sys)
+                                      (funcall [asdf component-depends-on] operation sys)
                                       :key #'car
                                       :test-not
                                       (lambda (o c)
                                         (or (eq c o)
                                             (typep c o)))))))))
-      (rec system-name))
-    ;; (nreverse printed-systems)
-    ))
+      (rec system-name))))
 
 (defmacro mac (expr)
   "Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.

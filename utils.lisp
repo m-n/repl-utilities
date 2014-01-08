@@ -2,6 +2,27 @@
 
 (in-package #:repl-utilities)
 
+;;;; Readtable for this file and repl-utilities.lisp
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; The resolution of symbols at run time allows repl-utilities
+  ;; compiled without quicklisp to call quicklisp at runtime, and a
+  ;; fasl compiled with quicklisp to be loaded into an image without
+  ;; quicklisp.
+
+  (defvar *repl-utilities-rt* (copy-readtable ())
+    "A readtable where [ql quickload] reads as
+    `(find-symbol ,(symbol-name 'quickload) ,(symbol-name 'ql))")
+
+  (defun run-time-symbol-reader (stream char)
+    (declare (ignore char))
+    (destructuring-bind (package name) (read-delimited-list #\] stream)
+      `(find-symbol ,(symbol-name name) ,(symbol-name package))))
+
+  (set-macro-character #\[ #'run-time-symbol-reader () *repl-utilities-rt*)
+  (set-syntax-from-char #\] #\) *repl-utilities-rt*)
+  (setq *readtable* *repl-utilities-rt*))
+
 ;;;; General Utilities
 
 (defun ensure-unquoted (form) 
@@ -48,32 +69,37 @@ conditionally read forms."
 
 (defun load-system-or-print (system-designator &optional control-string
                                                &rest format-args)
-  (handler-case (first-form #+quicklisp
-                            (ql:quickload system-designator)
-                            #+asdf
-                            (asdf:load-system system-designator))
-    #+quicklisp
-    (quicklisp-client::system-not-found (c)
-      (when (string-equal (ql:system-not-found-name c)
-                          system-designator)
-        (when control-string
-          (apply #'format t control-string format-args))))
-    #+asdf
-    ((and asdf:missing-component (not asdf:missing-dependency)) (c)
-      (declare (ignore c))
-      (when control-string
-        (apply #'format t control-string format-args)))))
+  (unless (find-package "ASDF")
+    (return-from load-system-or-print
+      (format t "I don't know how to load a system without asdf. ~
+                Attempting package manipulation anyway.")))
+  (let ((quicklispp (find-package "QUICKLISP")))
+    (handler-case
+        (if quicklispp
+            (funcall [ql quickload]
+                     system-designator)
+            (funcall [asdf load-system] system-designator))
+      (error (c)
+        (cond ((and quicklispp
+                    (typep c [quicklisp-client system-not-found]))
+               (when (string-equal (funcall [ql system-not-found-name] c)
+                                   system-designator)
+                 (when control-string
+                   (apply #'format t control-string format-args))))
+              ((typep c `(and ,[asdf missing-component] (not ,[asdf missing-dependency]))) 
+               (when control-string
+                 (apply #'format t control-string format-args)))
+              (t (format t "I'm lost on condition ~A!~&" c)))))))
 
 (defparameter *documentation-types*
   '(function setf type variable compiler-macro ;structure
     #-clisp method-combination)
   "Types that might work with (documentation obj type)")
 
-#+asdf
 (defun print-asdf-description (package)
   (let ((description (ignore-errors
-                       (asdf:system-description
-                        (asdf:find-system
+                       (funcall [asdf system-description]
+                        (funcall [asdf find-system]
                          (string-downcase (package-name
                                            package)))))))
     (when description
