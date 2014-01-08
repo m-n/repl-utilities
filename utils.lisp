@@ -74,22 +74,27 @@ conditionally read forms."
       (format t "I don't know how to load a system without asdf. ~
                 Attempting package manipulation anyway.")))
   (let ((quicklispp (find-package "QUICKLISP")))
-    (handler-case
-        (if quicklispp
-            (funcall [ql quickload]
-                     system-designator)
-            (funcall [asdf load-system] system-designator))
-      (error (c)
-        (cond ((and quicklispp
-                    (typep c [quicklisp-client system-not-found]))
-               (when (string-equal (funcall [ql system-not-found-name] c)
-                                   system-designator)
-                 (when control-string
-                   (apply #'format t control-string format-args))))
-              ((typep c `(and ,[asdf missing-component] (not ,[asdf missing-dependency]))) 
-               (when control-string
-                 (apply #'format t control-string format-args)))
-              (t (format t "I'm lost on condition ~A!~&" c)))))))
+    (handler-bind ((error
+                    (lambda (c)
+                      (cond ((and quicklispp
+                                  (typep c [quicklisp-client system-not-found]))
+                             (when (string-equal
+                                    (funcall [ql system-not-found-name] c)
+                                    system-designator)
+                               (return-from load-system-or-print
+                                 (when control-string
+                                   (apply #'format t control-string
+                                          format-args)))))
+                            ((typep c `(and ,[asdf missing-component]
+                                            (not ,[asdf missing-dependency])))
+                             (return-from load-system-or-print
+                               (when control-string
+                                 (apply #'format t control-string
+                                        format-args))))))))
+      (if quicklispp
+          (funcall [ql quickload]
+                   system-designator)
+          (funcall [asdf load-system] system-designator)))))
 
 (defparameter *documentation-types*
   '(function setf type variable compiler-macro ;structure
