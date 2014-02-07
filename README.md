@@ -140,3 +140,26 @@ package I am switching into.
                            package)))))
 
     (pushnew 'd-p-d-package *dev-hooks*)
+
+Installation
+============
+
+The most straitforward way to use REPL-UTILITIES, assuming you are
+using quicklisp, is to place the following in your lisp's init file
+after the quicklisp loading forms.
+
+    (funcall (find-symbol (symbol-name '#:quickload) (symbol-name '#:ql))
+             '#:repl-utilities)
+    (use-package  '#:repl-utilities)
+
+Or, in a running image, you can simply QL:QUICKLOAD it.
+
+To load REPL-UTILITIES in an image without ASDF (an atypical use
+case), you can load it with the following:
+
+    (load "/path/to/repl-utilities/load")
+    (use-package  '#:repl-utilities)
+
+The REPL-UTILITIES features relating to systems wrap ASDF and
+QUICKLISP functionality. When ASDF is unavailable they print a message
+indicating the limitation.
