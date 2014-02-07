@@ -49,6 +49,9 @@ automatically unquote quoted arguments.
 Features
 ========
 
+The following is lightly edited output of
+    (repl-utilities:summary repl-utilities)
+
 Introspective Procedures
 ------------------------
 
@@ -86,6 +89,10 @@ Pulling It Together
     *BRING-HOOKS*:      List of functions to be funcalled after a package is loaded with BRING.
     SHADOWED-IMPORT:    Import each symbol into PACKAGE, unless a symbol of the same name is present.
 
+To view full docstrings and argument lists type:
+    (repl-utilities:readme repl-utilities)
+in your the repl.
+
 Examples of \*dev-hooks\*
 =======================
 
@@ -107,7 +114,7 @@ for appropriate behavior when todo-imports is redefined.
 This illustrates a reason I prefer importing to binding personal
 functions to keywords even though importing leaves the possibility of
 symbol conflicts: it encourages me to write code in a form that is
-suitable for sharing as an asdf system.
+suitable for sharing as an ASDF system.
 
 One hook I am quite fond of tries to sync the
 \*default-pathname-defaults\* and emacs default-directory with the
