@@ -358,7 +358,7 @@ Random state seed is changed when defmacro repeatably is reloaded."
 
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
-					   (operation [asdf load-op]))
+					   (operation "LOAD-OP"))
   "Print the pathname of the system and of the systems needed to operation it.
 
   Operation should be a symbol naming an operation recognized by
@@ -366,6 +366,7 @@ Random state seed is changed when defmacro repeatably is reloaded."
   (unless (find-package "ASDF") (return-from dependency-locations
                                   (format t "I don't know how to find ~
                                             dependencies without asdf.")))
+  (when (stringp operation) (setq operation (find-symbol operation "ASDF")))
   (let (printed-systems)
     (labels ((rec (sys)
                (setq sys (funcall [asdf find-system] sys))
