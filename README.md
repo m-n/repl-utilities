@@ -144,7 +144,7 @@ package I am switching into.
 Installation
 ============
 
-The most straitforward way to use REPL-UTILITIES, assuming you are
+The most straightforward way to use REPL-UTILITIES, assuming you are
 using quicklisp, is to place the following in your lisp's init file
 after the quicklisp loading forms.
 
