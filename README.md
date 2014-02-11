@@ -50,6 +50,7 @@ Features
 ========
 
 The following is lightly edited output of
+
     (repl-utilities:summary repl-utilities)
 
 Introspective Procedures
@@ -90,7 +91,9 @@ Pulling It Together
     SHADOWED-IMPORT:    Import each symbol into PACKAGE, unless a symbol of the same name is present.
 
 To view full docstrings and argument lists type:
+
     (repl-utilities:readme repl-utilities)
+
 in your the repl.
 
 Examples of \*dev-hooks\*
