@@ -223,6 +223,21 @@ Mnemonic for develop.
 			     (cons ',(ensure-unquoted nick-symbol)
 				   ,old-nicknames)))))))
 
+(defmacro package-apropos (string-designator)
+  "Print all package names and nicknames which contain the given string."
+  `(package-apropos% ',(ensure-unquoted string-designator)))
+
+(defun package-apropos% (string-designator)
+  (let ((string (string string-designator))
+        nicknamep)
+    (dolist (p (list-all-packages) (values))
+      (setq nicknamep nil)
+      (dolist (name (cons (package-name p)
+                          (package-nicknames p)))
+        (when (search string name :test #'char-equal)
+          (format t "~&~A~30,5t~@[(Nickname of ~A)~]~&" name nicknamep))
+        (unless nicknamep (setq nicknamep name))))))
+
 ;;;; Symbol Utilities
 
 (defmacro deflex (var val &optional (doc nil docp))    

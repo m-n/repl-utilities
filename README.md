@@ -58,6 +58,7 @@ Introspective Procedures
 
     README:             Print the documentation on the exported symbols of a package.
     SUMMARY:            Print the exported symbols along with the first line of their docstrings.
+    PACKAGE-APROPOS:    Print all package names and nicknames which contain the given string.
     DOC:                Print any documentation for the symbol.
     DEPENDENCY-LOCATIONS:    Print the pathname of the system and of the systems needed to operation it.
     EXFNS:              Print the external fboundp symbols of a package.

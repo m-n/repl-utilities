@@ -14,6 +14,7 @@
    #:lex
    #:readme
    #:summary
+   #:package-apropos
    #-(or clisp ccl) ;; causes a symbol conflict
    #:arglist
    #:de
