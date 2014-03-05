@@ -166,16 +166,24 @@ Mnemonic for develop.
   "Print the external symbols for which find-class is truthy."
 
   #+(or sbcl ccl) exts
-  #+(or sbcl ccl) (first-form #+sbcl(sb-ext:valid-type-specifier-p symbol)
-                              #+ccl(ccl:type-specifier-p symbol))
+  #+(or sbcl ccl) (let ((fn (cond ((find-package "SB-EXT")
+                                   [sb-ext valid-type-specifier-p])
+                                  ((find-package "CCL")
+                                   [ccl type-specifier-p]))))
+                    (if fn
+                        (funcall fn symbol)
+                        (throw 'not-supported
+                          (prog1 (values)
+                            (princ "EXTS is not supported here.")))))
   #+(or sbcl ccl) "Print the external symbols which are type specifiers.")
 
 (defun print-symbols (package-designator test)
-  (let (symbols)
-    (do-external-symbols (symbol package-designator)
-      (when (funcall test symbol)
-        (push symbol symbols)))
-    (format t "~{~A, ~}" (string-sort symbols))))
+  (catch 'not-supported
+    (let (symbols)
+      (do-external-symbols (symbol package-designator)
+        (when (funcall test symbol)
+          (push symbol symbols)))
+      (format t "~{~A, ~}" (string-sort symbols)))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. 
