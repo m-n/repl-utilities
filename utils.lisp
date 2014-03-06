@@ -16,8 +16,10 @@
 
   (defun run-time-symbol-reader (stream char)
     (declare (ignore char))
-    (destructuring-bind (package name) (read-delimited-list #\] stream)
-      `(find-symbol ,(symbol-name name) ,(symbol-name package))))
+    (if *read-suppress*
+        (read-delimited-list #\] stream)
+        (destructuring-bind (package name) (read-delimited-list #\] stream)
+          `(find-symbol ,(symbol-name name) ,(symbol-name package)))))
 
   (set-macro-character #\[ #'run-time-symbol-reader () *repl-utilities-rt*)
   (set-syntax-from-char #\] #\) *repl-utilities-rt*)
@@ -113,15 +115,22 @@ conditionally read forms."
 
 ;;;; Portability
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  #+sbcl (require 'sb-introspect)
-  #+sbcl (require 'sb-sprof))
- 
+(defun require-once (string)
+  (let ((tried (load-time-value
+                (make-hash-table :test #'equal :size 8))))
+       (or (find-package string)
+           (unless (gethash string tried)
+             (setf (gethash string tried) t)
+             (ignore-errors (require string))
+             (find-package string)))))
+
 (defun arglist (fname)
   "Return the arglist for the given function name.
 Implementations taken from slime."
   (first-form
-   #+sbcl (sb-introspect:function-lambda-list fname)
+   #+sbcl (if (require-once "SB-INTROSPECT")
+              (funcall [sb-introspect function-lambda-list] fname)
+              :failed-to-load-sb-introspect)
    #+ccl (multiple-value-bind (arglist binding)
 	     (let ((*break-on-signals* nil))
 	       (ccl:arglist fname))
@@ -135,4 +144,3 @@ Implementations taken from slime."
 		  (return (ext:arglist fname)))
 		 :not-available))
    :arglist-nonportable-patches-welcome))
-

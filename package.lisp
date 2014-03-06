@@ -19,11 +19,9 @@
    #:arglist
    #:de
    #:nic
-   #+asdf
    #:dependency-locations
    #:dbgv
    #:repeatably
-   #+sbcl
    #:rig
    #:exs
    #:exfns
