@@ -126,22 +126,23 @@ package I am switching into.
 
     (defun d-p-d-package (&optional (package *package*))
       "If the package's name is a homonym for an asdf system, change the *d-p-d* to its
-       location on disk and, if (setq slime-enable-evaluate-in-emacs t)
-       in emacs, set the slime repl's pathname default as well."
-       ;; slime-enable-evaluate-in-emacs warns that it can be a security risk
-      (let ((pathloc (ignore-errors (asdf:component-pathname
-                                     (asdf:find-system
-                                      (intern (package-name package)
-                                              :keyword))))))
+      location on disk and, if (setq slime-enable-evaluate-in-emacs t)
+      in emacs, set the slime repl's pathname default as well."
+      ;; slime-enable-evaluate-in-emacs warns that it can be a security risk
+      (let ((pathloc (ignore-errors (funcall (find-symbol "COMPONENT-PATHNAME" "ASDF")
+                                              (funcall (find-symbol "FIND-SYSTEM" "ASDF")
+                                                       (intern (package-name package)
+                                                               :keyword))))))
         (cond (pathloc
                (setq *default-pathname-defaults* pathloc)
-               (swank:eval-in-emacs
-                `(with-current-buffer (slime-output-buffer)
-                   (setq default-directory
-                         ,(namestring *default-pathname-defaults*)))
-                :nowait))
+               (when (find-package "SWANK")
+                 (funcall (find-symbol "EVAL-IN-EMACS" "SWANK")
+                          `(with-current-buffer (slime-output-buffer)
+                             (setq default-directory
+                                   ,(namestring *default-pathname-defaults*)))
+                          :nowait)))
               (t (format t "~& Couldn't find a source location for ~A~%"
-                           package)))))
+                         package)))))
 
     (pushnew 'd-p-d-package *dev-hooks*)
 
