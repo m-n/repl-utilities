@@ -165,8 +165,8 @@ Mnemonic for develop.
   exfns (fboundp symbol)
   "Print the external fboundp symbols of a package."
 
-  exvs (boundp symbol)
-  "Print the external boundp symbols of a package."
+  exvs (specialp symbol)
+  "Print the external globally special symbols of a package."
 
   excs  (find-class symbol nil)
   "Print the external symbols for which find-class is truthy."

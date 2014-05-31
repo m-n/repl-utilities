@@ -103,6 +103,12 @@ conditionally read forms."
     #-clisp method-combination)
   "Types that might work with (documentation obj type)")
 
+(defun specialp (x)
+  (or (boundp x)
+      (eval `(let (,x)
+               (declare (ignorable ,x))
+               (boundp ',x)))))
+
 (defgeneric exists-as (symbol type)
   (:method (symbol (type (eql 'function)))
     (fboundp symbol))
@@ -112,7 +118,7 @@ conditionally read forms."
   (:method (symbol (type (eql 'type)))
     (type-specifier-p symbol))
   (:method (symbol (type (eql 'variable)))
-    (boundp symbol))
+    (specialp symbol))
   (:method (symbol (type (eql 'compiler-macro)))
     (compiler-macro-function symbol))
   (:method ((symbol t) (type (eql 'method-combination)))
