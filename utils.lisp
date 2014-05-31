@@ -135,6 +135,14 @@ conditionally read forms."
       (format t "~&~A > ASDF System~% ~<~A~%~%~>"
               (package-name package) description))))
 
+(defun split-by (test sequence)
+  (let (pass fail)
+    (dolist (elt sequence (values (nreverse pass)
+                                  (nreverse fail)))
+      (if (funcall test elt)
+          (push elt pass)
+          (push elt fail)))))
+
 ;;;; Portability
 
 (define-condition unsupported () ())

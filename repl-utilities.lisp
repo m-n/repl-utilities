@@ -127,23 +127,28 @@ Mnemonic for develop.
 	  (push symbol (cdr (assoc type buckets)))
 	  (setq unlocated-symbols (remove symbol unlocated-symbols)))))
     (when unlocated-symbols
-      (format t "~&Undocumented symbols: ~{~A~^, ~}" (string-sort
-                                                      unlocated-symbols)))
+      (format t "~&Uncategorized Symbols: ~@
+                ~@<    ~@;~{~A~^, ~}~:@>~%" (string-sort
+                                             unlocated-symbols)))
     (map nil (lambda (bucket)
 	       (destructuring-bind (type . symbols) bucket
-		 (format t "~&")
-		 (when symbols
-		   (format t "~%~:(~A~)s" type)
-                   (let ((undoc (remove-if (lambda (s) (documentation s type))
-                                           symbols)))
-                     (when undoc
-                       (format t ": ~{~A~^, ~}~%~%" (string-sort undoc))))
-		   (mapc (lambda (symbol)
-			   (when (documentation symbol type)
-                             (format t "~&~A:~20,5t~a~%"
-                                     symbol (first-line
-                                             (documentation symbol type)))))
-			 (string-sort symbols)))))
+                 (multiple-value-bind (documented undocumented)
+                     (split-by (lambda (s) (documentation s type))
+                               (string-sort symbols))
+                   (format t "~&")
+                   (when symbols (format t "~%~:(~A~)s" type))
+                   (when documented
+                     (mapc (lambda (symbol)
+                             (when (documentation symbol type)
+                               (format t "~&~A:~20,5t~a~%"
+                                       symbol (first-line
+                                               (documentation symbol type)))))
+                           documented))
+                   (when (and documented undocumented)
+                     (format t "~:(~A~)s without docstrings:" type))
+                   (when undocumented
+                     (format t "~&    ~@<~{~A~^, ~}~:@>~%"
+                             undocumented)))))
 	 buckets)))
 
 (defmacro define-external-symbol-printers (&body name-condition-doc)
