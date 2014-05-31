@@ -27,7 +27,6 @@
    #:exfns
    #:exvs
    #:excs
-   #+(or sbcl ccl) ;; needs implementation specific TYPE-SPECIFIER-P or similar
    #:exts
    #:mac
    #:shadowed-import))

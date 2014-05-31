@@ -117,28 +117,34 @@ Mnemonic for develop.
   `(summary% ',(ensure-unquoted package)))
 
 (defun summary% (&optional (package-designator *package*))
-  (let ((types (mapcar #'list *documentation-types*))
-	(undocumented-symbols ()))
+  (let ((buckets (mapcar #'list *documentation-types*))
+	(unlocated-symbols ()))
     (do-external-symbols (symbol package-designator)
-      (push symbol undocumented-symbols)
-      (dolist (type (mapcar #'car types))
-	(when (documentation symbol type)
-	  (push symbol (cdr (assoc type types)))
-	  (setq undocumented-symbols (remove symbol undocumented-symbols)))))
-    (when undocumented-symbols
+      (push symbol unlocated-symbols)
+      (dolist (type (mapcar #'car buckets))
+	(when (or (documentation symbol type)
+                  (exists-as symbol type))
+	  (push symbol (cdr (assoc type buckets)))
+	  (setq unlocated-symbols (remove symbol unlocated-symbols)))))
+    (when unlocated-symbols
       (format t "~&Undocumented symbols: ~{~A~^, ~}" (string-sort
-                                                      undocumented-symbols)))
-    (map nil (lambda (field)
-	       (destructuring-bind (type . symbols) field
+                                                      unlocated-symbols)))
+    (map nil (lambda (bucket)
+	       (destructuring-bind (type . symbols) bucket
 		 (format t "~&")
 		 (when symbols
 		   (format t "~%~:(~A~)s" type)
+                   (let ((undoc (remove-if (lambda (s) (documentation s type))
+                                           symbols)))
+                     (when undoc
+                       (format t ": ~{~A~^, ~}~%~%" (string-sort undoc))))
 		   (mapc (lambda (symbol)
-			   (format t "~&~A:~20,5t~a~%"
-				   symbol (first-line
-					   (documentation symbol type))))
+			   (when (documentation symbol type)
+                             (format t "~&~A:~20,5t~a~%"
+                                     symbol (first-line
+                                             (documentation symbol type)))))
 			 (string-sort symbols)))))
-	 types)))
+	 buckets)))
 
 (defmacro define-external-symbol-printers (&body name-condition-doc)
   (flet ((symbol-printer-definition (name condition doc)
@@ -165,25 +171,18 @@ Mnemonic for develop.
   excs  (find-class symbol nil)
   "Print the external symbols for which find-class is truthy."
 
-  #+(or sbcl ccl) exts
-  #+(or sbcl ccl) (let ((fn (cond ((find-package "SB-EXT")
-                                   [sb-ext valid-type-specifier-p])
-                                  ((find-package "CCL")
-                                   [ccl type-specifier-p]))))
-                    (if fn
-                        (funcall fn symbol)
-                        (throw 'not-supported
-                          (prog1 (values)
-                            (princ "EXTS is not supported here.")))))
-  #+(or sbcl ccl) "Print the external symbols which are type specifiers.")
+  exts (type-specifier-p symbol)
+  "Print the external symbols which are type specifiers.")
 
 (defun print-symbols (package-designator test)
-  (catch 'not-supported
-    (let (symbols)
-      (do-external-symbols (symbol package-designator)
-        (when (funcall test symbol)
-          (push symbol symbols)))
-      (format t "~{~A, ~}" (string-sort symbols)))))
+  (handler-case (let (symbols)
+                  (do-external-symbols (symbol package-designator)
+                    (when (funcall test symbol)
+                      (push symbol symbols)))
+                  (format t "~{~A, ~}" (string-sort symbols)))
+    (unsupported ()
+      (multiple-value-prog1 (values)
+        (princ "EXTS is not supported here.")))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
   "Trace all of the symbols in *package*. 

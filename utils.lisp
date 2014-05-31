@@ -103,6 +103,22 @@ conditionally read forms."
     #-clisp method-combination)
   "Types that might work with (documentation obj type)")
 
+(defgeneric exists-as (symbol type)
+  (:method (symbol (type (eql 'function)))
+    (fboundp symbol))
+  (:method (symbol (type (eql 'setf)))
+    (handler-case (fdefinition (list 'setf symbol))
+      (undefined-function () ())))
+  (:method (symbol (type (eql 'type)))
+    (type-specifier-p symbol))
+  (:method (symbol (type (eql 'variable)))
+    (boundp symbol))
+  (:method (symbol (type (eql 'compiler-macro)))
+    (compiler-macro-function symbol))
+  (:method ((symbol t) (type (eql 'method-combination)))
+    ;; fixme
+    ()))
+
 (defun print-asdf-description (package)
   (let ((description (ignore-errors
                        (funcall [asdf system-description]
@@ -114,6 +130,17 @@ conditionally read forms."
               (package-name package) description))))
 
 ;;;; Portability
+
+(define-condition unsupported () ())
+
+(defun type-specifier-p (symbol)
+  (let ((fn (cond ((find-package "SB-EXT")
+                   [sb-ext valid-type-specifier-p])
+                  ((find-package "CCL")
+                   [ccl type-specifier-p]))))
+    (if fn
+        (funcall fn symbol)
+        (signal 'unsupported))))
 
 (defun require-once (string)
   (let ((tried (load-time-value
