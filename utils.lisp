@@ -67,7 +67,7 @@ conditionally read forms."
 	  (import sym package)
 	  (when (and print-when-shadowed-p
 		     (not (eq found sym)))
-	    (format t "~&Left behind ~A to avoid symbol conflict.~%" sym))))))
+	    (format t "~&Left behind ~S to avoid symbol conflict.~%" sym))))))
 
 (defun load-system-or-print (system-designator &optional control-string
                                                &rest format-args)
