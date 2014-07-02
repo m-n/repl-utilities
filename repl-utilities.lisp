@@ -373,10 +373,15 @@ attempts to load SB-SPROF."
 
 (defmacro repeatably (&body body)
   "Use the same random state seed for every execution.
-Random state seed is changed when defmacro repeatably is reloaded."
-  `(let ((*random-state* (make-random-state
-                          (load-time-value (make-random-state)))))
-     ,@body))
+Random state seed is changed when call-repeatably is reloaded."
+  `(call-repeatably (lambda () ,@body)))
+
+(defun call-repeatably (thunk)
+  (let ((*random-state* (make-random-state
+                         (load-time-value (make-random-state t) t))))
+    (funcall thunk)))
+(unless (compiled-function-p #'call-repeatably)
+  (compile 'call-repeatably))
 
 (defun print-hash (hash-table)
   "Print the hash table as: Key, Value~% "
