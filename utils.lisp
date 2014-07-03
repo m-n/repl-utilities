@@ -110,6 +110,8 @@ conditionally read forms."
                (boundp ',x)))))
 
 (defgeneric exists-as (symbol type)
+  (:method ((symbol t) (type (eql 't)))
+    t)
   (:method (symbol (type (eql 'function)))
     (fboundp symbol))
   (:method (symbol (type (eql 'setf)))
@@ -117,6 +119,8 @@ conditionally read forms."
       (undefined-function () ())))
   (:method (symbol (type (eql 'type)))
     (type-specifier-p symbol))
+  (:method (symbol (type (eql 'class)))
+    (find-class symbol nil))
   (:method (symbol (type (eql 'variable)))
     (specialp symbol))
   (:method (symbol (type (eql 'compiler-macro)))

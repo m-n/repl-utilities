@@ -151,40 +151,39 @@ Mnemonic for develop.
                              undocumented)))))
 	 buckets)))
 
-(defmacro define-external-symbol-printers (&body name-condition-doc)
-  (flet ((symbol-printer-definition (name condition doc)
-           `(defmacro ,name (&optional (package *package*))
+(defmacro define-external-symbol-printers (&body name-type-docs)
+  (flet ((symbol-printer-definition (name type doc)
+           `(defmacro ,name (&optional (package-name *package*))
               ,doc
-              `(print-symbols ',(ensure-unquoted package)
-                             ;; intentionally captures SYMBOL
-                             (lambda (symbol) (declare (ignorable symbol))
-                                ,',condition)))))
-    `(progn ,@(loop for (name condition doc) on name-condition-doc by #'cdddr
-                    collect (symbol-printer-definition name condition doc)))))
+              `(print-symbols `,',(ensure-unquoted package-name)
+                              ',',type))))
+    `(progn ,@(loop for (name type doc) on name-type-docs by #'cdddr
+                    collect (symbol-printer-definition name type doc)))))
 
 (define-external-symbol-printers
 
   exs t
   "Print the external symbols of package."
 
-  exfns (fboundp symbol)
+  exfns function
   "Print the external fboundp symbols of a package."
 
-  exvs (specialp symbol)
+  exvs variable
   "Print the external globally special symbols of a package."
 
-  excs  (find-class symbol nil)
+  excs class
   "Print the external symbols for which find-class is truthy."
 
-  exts (type-specifier-p symbol)
+  exts type
   "Print the external symbols which are type specifiers.")
 
-(defun print-symbols (package-designator test)
+(defun print-symbols (package-designator type)
   (handler-case (let (symbols)
                   (do-external-symbols (symbol package-designator)
-                    (when (funcall test symbol)
+                    (when (exists-as symbol type)
                       (push symbol symbols)))
-                  (format t "~{~A, ~}" (string-sort symbols)))
+                  (format t "~@<~{~A~^, ~}~:@>~%" (string-sort symbols))
+                  (values))
     (unsupported ()
       (multiple-value-prog1 (values)
         (princ "EXTS is not supported here.")))))
