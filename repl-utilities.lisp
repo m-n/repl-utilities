@@ -393,7 +393,7 @@ Random state seed is changed when call-repeatably is reloaded."
 
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
-					   (operation "LOAD-OP"))
+					   (operation ()))
   "Print the pathname of the system and of the systems needed to operation it.
 
   Operation should be a symbol naming an operation recognized by
@@ -401,7 +401,9 @@ Random state seed is changed when call-repeatably is reloaded."
   (unless (find-package "ASDF") (return-from dependency-locations
                                   (format t "I don't know how to find ~
                                             dependencies without asdf.")))
-  (when (stringp operation) (setq operation (find-symbol operation "ASDF")))
+  (when operation
+    (warn "The operation argument to dependency-locations ~
+           is not longer supported."))
   (let (printed-systems)
     (labels ((rec (sys)
                (setq sys (funcall [asdf find-system] sys))
@@ -410,26 +412,11 @@ Random state seed is changed when call-repeatably is reloaded."
 		 (format t "~&~S" (funcall [asdf component-pathname] sys))
 		 (when print-system-names-p
 		   (format t ", ~A~&"  (funcall [asdf component-name] sys)))
-                 (map nil (lambda (s) (map nil #'rec s))
-                      (mapcar (lambda (ss)
-                                (remove-if-not
-                                 (lambda (s)
-                                   ;; asfd3 includes load-op of #<asdf:cl-sourc-file>s
-                                   ;; which we don't want to report
-                                   (or (typep s [asdf system])
-                                       ;; but s is specified to be a designator,
-                                       ;; not necessarily an instance of asdf:system,
-                                       ;; and asdf2 at least takes advantage of that
-                                       (symbolp s)
-                                       (stringp s)))
-                                 (cdr ss)))
-                              (remove operation
-                                      (funcall [asdf component-depends-on] operation sys)
-                                      :key #'car
-                                      :test-not
-                                      (lambda (o c)
-                                        (or (eq c o)
-                                            (typep c o)))))))))
+                 (dolist (sysname (funcall
+                                   (or [asdf system-depends-on]
+                                       [asdf component-load-dependencies])
+                                    sys))
+                   (rec sysname)))))
       (rec system-name))))
 
 (defmacro mac (expr)
