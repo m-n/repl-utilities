@@ -27,7 +27,7 @@
 
 ;;;; General Utilities
 
-(defun ensure-unquoted (form) 
+(defun ensure-unquoted (form)
   "If form is quoted, remove one level of quoting. Otherwise return form.
 This is a useful for defining convenience for macros which may be passed a
 quoted or unquoted symbol."
@@ -42,7 +42,7 @@ quoted or unquoted symbol."
      ,@body))
 
 (defmacro first-form (&rest forms)
-  "Return the first form; useful when you want one of multiple possible 
+  "Return the first form; useful when you want one of multiple possible
 conditionally read forms."
   (first forms))
 
@@ -59,7 +59,7 @@ conditionally read forms."
 (defun shadowed-import (symbols
 			&optional (package *package*) (print-when-shadowed-p t))
   "Import each symbol into PACKAGE, unless a symbol of the same name is present.
-  If print-when-shadowed-p is true, print a message for each not-imported 
+  If print-when-shadowed-p is true, print a message for each not-imported
   symbol indicating that it was not imported."
   (dolist (sym (if (consp symbols) symbols (list symbols)) t)
     (let ((found (find-symbol (symbol-name sym) package)))

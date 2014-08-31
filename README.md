@@ -1,7 +1,7 @@
-REPL-UTILITIES 
+REPL-UTILITIES
 ==============
 
-A set of utilities which ease life at the repl. 
+A set of utilities which ease life at the repl.
 
 REPL-UTILITIES is tested on SBCL, CCL and CLISP, and further porting should be
 easy.
@@ -12,14 +12,14 @@ The Big Ideas
 REPL-UTILITIES includes three sorts of features: __introspective__ procedures,
 __miscellaneous utility__ functions, and, __pulling them together__, methods to
 conveniently keep these symbols and optionally additional symbols available
-in whichever package you switch to. 
+in whichever package you switch to.
 
 For best effect load this package and use-package it from your lisp's init file.
 
 If you wish to in-package another package at the repl in the course of
 developing it, you can retain access to these REPL-UTILITIES by using DEV
 to load and swap to the new package. DEV will import the REPL-UTILITIES
-symbols into the new package, if they won't cause name conflicts. 
+symbols into the new package, if they won't cause name conflicts.
 
 DEV also maps funcall over \*DEV-HOOKS\* after changing the package. \*DEV-HOOKS\*
 is an empty list. I personally add hooks which import (via
@@ -32,10 +32,10 @@ My favorite operator in here is DEFLEX, taken from Rob Warnock and aliased
 to LEX. It defines a global lexical variable -- this lets you use temporary
 test variables without earmuffs safely:
 
-    (defvar *x* (list 1 2 3)) 
+    (defvar *x* (list 1 2 3))
     (mapcar #'print *x*) ; painful
 
-    (lex x (list 1 2 3)) 
+    (lex x (list 1 2 3))
     (mapcar #'print x) ; better
 
 Following the lead of CL:IN-PACKAGE, the package changing, loading,
@@ -73,10 +73,10 @@ Introspective Procedures
 Miscellaneous Utilities
 -----------------------
 
-    TRACE-PACKAGE:      Trace all of the symbols in *package*. 
+    TRACE-PACKAGE:      Trace all of the symbols in *package*.
     DEFLEX:             Define a top level (global) lexical VAR with initial value VAL,
     LEX:                Shortening of deflex: define a global lexical variable.
-    PRINT-HASH:         Print the hash table as: Key, Value~% 
+    PRINT-HASH:         Print the hash table as: Key, Value~%
     MAC:                Bind *gensym-counter* to 0, Macroexpand-1 the form, pprint result.
     DBGV:               Print WHERE, execute FORMS, and print each form and its result to the STREAM.
     RIG:                Execute body with profiling and timing.

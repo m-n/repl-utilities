@@ -50,11 +50,11 @@ Mnemonic for develop.
 (defvar *bring-hooks* ()
   "List of functions to be funcalled after a package is loaded with BRING.
 
- The functions are called with the package imported by bring as their only 
+ The functions are called with the package imported by bring as their only
  argument.")
 
 (defmacro bring (package &optional (shadowing-import-p nil))
-  "Attempt to ql:quickload or asdf:load-system a system with the same name as 
+  "Attempt to ql:quickload or asdf:load-system a system with the same name as
   package. Regardless of whether the load was successful import the package's
   exported symbols into the current package. If shadowing-import is nil, only
   the symbols which won't cause a symbol conflict are imported.
@@ -189,7 +189,7 @@ Mnemonic for develop.
         (princ "EXTS is not supported here.")))))
 
 (defmacro trace-package (&optional (package *package*) (inheritedp nil))
-  "Trace all of the symbols in *package*. 
+  "Trace all of the symbols in *package*.
 
  This won't attempt to trace any symbols in :cl"
   `(trace-package% ',(ensure-unquoted package) ,inheritedp))
@@ -251,7 +251,7 @@ Mnemonic for develop.
 
 ;;;; Symbol Utilities
 
-(defmacro deflex (var val &optional (doc nil docp))    
+(defmacro deflex (var val &optional (doc nil docp))
   "Define a top level (global) lexical VAR with initial value VAL,
   which is assigned unconditionally as with DEFPARAMETER. If a DOC
   string is provided, it is attached to both the name |VAR| and the
@@ -276,7 +276,7 @@ Mnemonic for develop.
   ;;; DEFLEX is
   ;;; Copyright (c) 2003-2007, 2011 Rob Warnock <rpw3@rpw3.org>.
   ;;; All Rights Reserved.
-  ;;; 
+  ;;;
   ;;; Permission to use, copy, modify, and/or distribute this software for any
   ;;; purpose with or without fee is hereby granted, provided that the above
   ;;; copyright notice and this permission notice appear in all copies.
@@ -327,22 +327,22 @@ Includes variable, function, type, compiler macro, method
 		    type
 		    (documentation symbol type)))))))
 
-;;;; Miscellaneous                                                                
+;;;; Miscellaneous
 
-(defmacro dbgv ((&optional (where "DEBUG") 
-                           (stream '*standard-output*)) 
-                &body forms) 
+(defmacro dbgv ((&optional (where "DEBUG")
+                           (stream '*standard-output*))
+                &body forms)
   "Print WHERE, execute FORMS, and print each form and its result to the STREAM."
   ;; Alteration of Maciej Katafiasz's alteration of a Rob Warnock utility
   ;; See http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/df43ce7017c3f101/fda9d18d8196c41b
-  (with-gensyms (result) 
-    `(let (,result) 
-       (progn 
-         (format ,stream "~&DBGV at: ~a:~%" ,where) 
-         ,@(loop for form in forms 
-              collect `(progn 
-                         (setf ,result (multiple-value-list ,form)) 
-                         (format ,stream "~&~s = ~{~s~^, ~}~%" ',form ,result))) 
+  (with-gensyms (result)
+    `(let (,result)
+       (progn
+         (format ,stream "~&DBGV at: ~a:~%" ,where)
+         ,@(loop for form in forms
+              collect `(progn
+                         (setf ,result (multiple-value-list ,form))
+                         (format ,stream "~&~s = ~{~s~^, ~}~%" ',form ,result)))
          (values-list ,result)))))
 
 (defmacro rig (&body body)
