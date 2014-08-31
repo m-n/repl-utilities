@@ -394,10 +394,7 @@ Random state seed is changed when call-repeatably is reloaded."
 (defun dependency-locations (system-name &optional
 					   print-system-names-p
 					   (operation ()))
-  "Print the pathname of the system and of the systems needed to operation it.
-
-  Operation should be a symbol naming an operation recognized by
-  asfd:component-depends-on, e.g. 'asdf:load-op or 'asfd:test-op."
+  "Print the pathname of the system and of the systems needed to load it."
   (unless (find-package "ASDF") (return-from dependency-locations
                                   (format t "I don't know how to find ~
                                             dependencies without asdf.")))

@@ -60,7 +60,7 @@ Introspective Procedures
     SUMMARY:            Print the exported symbols along with the first line of their docstrings.
     PACKAGE-APROPOS:    Print all package names and nicknames which contain the given string.
     DOC:                Print any documentation for the symbol.
-    DEPENDENCY-LOCATIONS:    Print the pathname of the system and of the systems needed to operation it.
+    DEPENDENCY-LOCATIONS:    Print the pathname of the system and of the systems needed to load it.
     EXFNS:              Print the external fboundp symbols of a package.
     EXVS:               Print the external globally special symbols of a package.
     EXCS:               Print the external symbols for which find-class is truthy.
