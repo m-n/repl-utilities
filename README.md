@@ -95,7 +95,8 @@ To view full docstrings and argument lists type:
 
     (repl-utilities:readme repl-utilities)
 
-in your the repl.
+in your repl, or view the
+[api reference on quickdocs](http://quickdocs.org/repl-utilities/api).
 
 Examples of \*dev-hooks\*
 =======================
