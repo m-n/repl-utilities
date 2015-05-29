@@ -23,7 +23,7 @@
   "Attempt to ql:quickload or asfd:load-system a system with the same name as
    package, then swap to the package regardless of whether the load was
    successful. Import repl-utilities exported symbols that don't cause symbol
-   conflicts into the newly swapped to pacage.
+   conflicts into the newly swapped to package.
 Mnemonic for develop.
 
   After swapping to the package map funcall over *dev-hooks*.
