@@ -403,7 +403,7 @@ Random state seed is changed when call-repeatably is reloaded."
            is not longer supported."))
   (let (printed-systems)
     (labels ((rec (sys)
-               (setq sys (funcall [asdf find-system] sys))
+               (setq sys (funcall [asdf find-system] (dependency-name sys)))
 	       (unless (member sys printed-systems)
 		 (push sys printed-systems)
 		 (format t "~&~S" (funcall [asdf component-pathname] sys))
@@ -413,7 +413,13 @@ Random state seed is changed when call-repeatably is reloaded."
                                    (or [asdf system-depends-on]
                                        [asdf component-load-dependencies])
                                     sys))
-                   (rec sysname)))))
+                   (rec sysname))))
+             (dependency-name (dependency-def)
+               (if (consp dependency-def)
+                   (ccase (first dependency-def)
+                     ((:version :require) (second dependency-def))
+                     (:feature (dependency-name (third dependency-def))))
+                   dependency-def)))
       (rec system-name))))
 
 (defmacro mac (expr)
